@@ -2,12 +2,35 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCartStore } from "./store/useCartStore";
 import { motion, AnimatePresence } from "framer-motion";
+import { sendOrderToTelegram } from './telegram'; // Telegram funksiyasini import qildik
 
 function App() {
   const { t, i18n } = useTranslation();
   const { items, addToCart, removeFromCart, clearCart } = useCartStore();
   const [search, setSearch] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // --- TELEGRAMGA YUBORISH FUNKSIYASI ---
+  const handleCheckout = async () => {
+    if (items.length === 0) return;
+
+    // Test uchun mijoz ma'lumotlari
+    const customerInfo = {
+      name: "Shohrux (Saytdan test)",
+      phone: "+998 00 000 00 00",
+      address: "Urganch shahar"
+    };
+
+    const success = await sendOrderToTelegram(items, totalPrice, customerInfo);
+
+    if (success) {
+      alert("Buyurtma botga yuborildi! ✅");
+      clearCart(); // Savatchani tozalash
+      setIsCartOpen(false); // Savatchani yopish
+    } else {
+      alert("Xatolik yuz berdi! ❌");
+    }
+  };
 
   const products = [
     { id: 1, nomi: "iPhone 15 Pro", narxi: 14500000, img: "/image/iphone 15 pro.jpg", cat: "phone" },
@@ -107,7 +130,6 @@ function App() {
 
       {/* --- MAHSULOTLAR RO'YXATI --- */}
       <main className="max-w-7xl mx-auto p-6 pb-24">
-        {/* RESPONSIVE GRID QISMI SHU YERDA */}
         <motion.div 
           layout
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-10"
@@ -235,6 +257,7 @@ function App() {
                   <motion.button 
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={handleCheckout} // <--- Telegram funksiyasini shu yerga bog'ladik
                     className="w-full bg-blue-600 text-white py-6 rounded-[28px] font-black text-xl shadow-2xl shadow-blue-100 uppercase tracking-widest"
                   >
                     {t('buy')} 🚀
