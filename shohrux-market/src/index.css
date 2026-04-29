@@ -1,7 +1,5 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  background-color: #f8fafc;
-}
+/* O'zingizning qolgan CSS kodlaringizni shu yerda davom ettirishingiz mumkin */
