@@ -1,21 +1,19 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware"; // Xotirada saqlash uchun
+import { persist } from "zustand/middleware";
 
 export const useCartStore = create(
   persist(
     (set) => ({
       items: [],
-      
-      // Mahsulot qo'shish logikasi
-      addToCart: (product) => 
+
+      addToCart: (product) =>
         set((state) => {
-          const existingItem = state.items.find((item) => item.id === product.id);
-          
-          if (existingItem) {
+          const existing = state.items.find((item) => item.id === product.id);
+          if (existing) {
             return {
               items: state.items.map((item) =>
-                item.id === product.id 
-                  ? { ...item, quantity: (item.quantity || 1) + 1 } 
+                item.id === product.id
+                  ? { ...item, quantity: (item.quantity || 1) + 1 }
                   : item
               ),
             };
@@ -23,17 +21,24 @@ export const useCartStore = create(
           return { items: [...state.items, { ...product, quantity: 1 }] };
         }),
 
-      // Mahsulotni savatdan butunlay o'chirish
-      removeFromCart: (id) => 
-        set((state) => ({ 
-          items: state.items.filter((item) => item.id !== id) 
+      decreaseQuantity: (id) =>
+        set((state) => ({
+          items: state.items
+            .map((item) =>
+              item.id === id
+                ? { ...item, quantity: Math.max(1, (item.quantity || 1) - 1) }
+                : item
+            )
+            .filter((item) => item.quantity > 0),
         })),
 
-      // Savatni tozalash
+      removeFromCart: (id) =>
+        set((state) => ({
+          items: state.items.filter((item) => item.id !== id),
+        })),
+
       clearCart: () => set({ items: [] }),
     }),
-    {
-      name: "shohrux-market-storage", // LocalStorage'dagi kalit nomi
-    }
+    { name: "cart-storage" }
   )
 );
