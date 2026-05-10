@@ -9,9 +9,9 @@ require('dotenv').config();
 const app = express();
 const prisma = new PrismaClient();
 
-// CORS - eng muhim qismi
+// CORS sozlamasi - MUHIM
 app.use(cors({
-  origin: true, // Ixtiyoriy domenga ruxsat (Vercel/Netlify uchun)
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With']
@@ -19,16 +19,15 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
-
-// Preflight so'rovlariga 204 emas, 200 javob berish
 app.options('*', cors());
 
-const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_secret_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_2026';
 
-// Middleware: Token tekshirish
+// Tokenni tekshirish Middleware
 const authenticate = (req, res, next) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: "Kirish shart" });
+  if (!token) return res.status(401).json({ error: "Avtorizatsiyadan o'ting" });
+
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) return res.status(403).json({ error: "Token noto'g'ri" });
     req.userId = decoded.id;
@@ -36,7 +35,7 @@ const authenticate = (req, res, next) => {
   });
 };
 
-// --- ROUTES ---
+// --- AUTH YO'NALISHLARI ---
 
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -49,7 +48,7 @@ app.post('/api/auth/register', async (req, res) => {
     res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
     res.status(201).json({ success: true, token, user: { id: user.id, full_name: user.full_name } });
   } catch (err) {
-    res.status(400).json({ error: "Xatolik: " + err.message });
+    res.status(400).json({ error: "Email yoki telefon band" });
   }
 });
 
@@ -75,6 +74,17 @@ app.get('/api/auth/profile', authenticate, async (req, res) => {
   res.json(user);
 });
 
+app.put('/api/auth/profile', authenticate, async (req, res) => {
+  const { full_name, email, phone } = req.body;
+  const updatedUser = await prisma.user.update({
+    where: { id: req.userId },
+    data: { full_name, email, phone }
+  });
+  res.json(updatedUser);
+});
+
+// --- ORDER YO'NALISHLARI ---
+
 app.post('/api/auth/orders', authenticate, async (req, res) => {
   try {
     const { items, totalAmount, address } = req.body;
@@ -92,5 +102,13 @@ app.post('/api/auth/orders', authenticate, async (req, res) => {
   }
 });
 
+app.get('/api/auth/orders', authenticate, async (req, res) => {
+  const orders = await prisma.order.findMany({
+    where: { userId: req.userId },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(orders);
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server on ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));

@@ -11,24 +11,27 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const res = await axiosInstance.get('/auth/profile');
-          setUser(res.data);
-          setIsAuthenticated(true);
-        } catch {
-          localStorage.removeItem('token');
-          setIsAuthenticated(false);
-        }
+  // Profilni yuklash
+  const loadUser = async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const res = await axiosInstance.get('/auth/profile');
+        setUser(res.data);
+        setIsAuthenticated(true);
+      } catch (err) {
+        localStorage.removeItem('token');
+        setIsAuthenticated(false);
       }
-      setLoading(false);
-    };
-    checkAuth();
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadUser();
   }, []);
 
+  // Login
   const login = async (emailOrPhone, password) => {
     try {
       const res = await axiosInstance.post('/auth/login', { emailOrPhone, password });
@@ -44,6 +47,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Register
   const register = async (userData) => {
     try {
       const res = await axiosInstance.post('/auth/register', userData);
@@ -51,23 +55,46 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
-      toast.success("Muvaffaqiyatli ro'yxatdan o'tdingiz!");
+      toast.success("Ro'yxatdan o'tish muvaffaqiyatli!");
       return { success: true };
     } catch (err) {
-      toast.error(err.response?.data?.error || "Ro'yxatdan o'tishda xato");
+      toast.error(err.response?.data?.error || "Xatolik yuz berdi");
       return { success: false };
     }
   };
 
+  // Profilni yangilash (Yangi qo'shildi)
+  const updateProfile = async (data) => {
+    try {
+      const res = await axiosInstance.put('/auth/profile', data);
+      setUser(res.data);
+      toast.success('Profil yangilandi!');
+      return { success: true };
+    } catch (err) {
+      toast.error('Yangilashda xatolik');
+      return { success: false };
+    }
+  };
+
+  // Buyurtma berish (Yangi qo'shildi)
   const addOrder = async (orderData) => {
     try {
       await axiosInstance.post('/auth/orders', orderData);
       toast.success('Buyurtmangiz qabul qilindi!');
       return { success: true };
     } catch (err) {
-      console.error("Order error:", err);
-      toast.error('Buyurtma berishda xatolik yuz berdi');
+      toast.error('Buyurtma berishda xato');
       return { success: false };
+    }
+  };
+
+  // Buyurtmalarni olish (Yangi qo'shildi)
+  const getOrders = async () => {
+    try {
+      const res = await axiosInstance.get('/auth/orders');
+      return { success: true, orders: res.data };
+    } catch (err) {
+      return { success: false, orders: [] };
     }
   };
 
@@ -79,7 +106,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loading, login, register, logout, addOrder }}>
+    <AuthContext.Provider value={{ 
+      user, isAuthenticated, loading, 
+      login, register, logout, 
+      updateProfile, addOrder, getOrders 
+    }}>
       {!loading && children}
     </AuthContext.Provider>
   );
