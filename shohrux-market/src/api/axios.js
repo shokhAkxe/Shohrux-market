@@ -4,8 +4,6 @@ const API_URL = 'https://market-api.onrender.com/api';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
-  // withCredentials: true,  ← BUNI O'CHIRING YOKI FALSE QILING
-  withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
   },

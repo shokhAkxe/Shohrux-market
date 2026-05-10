@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { sendOrderToTelegram } from "../../api/telegram";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
-import axios from "axios"; // Axios'ni import qilish kerak
+import axiosInstance from "../../api/axios"; // axiosInstance import qilish kerak
 
 function CheckoutModal({ isOpen, onClose, cartItems, totalPrice, clearCart }) {
   const { t } = useTranslation();
@@ -31,10 +31,10 @@ function CheckoutModal({ isOpen, onClose, cartItems, totalPrice, clearCart }) {
     
     try {
       // 1. Telegramga yuborish
-      const telegramSent = await sendOrderToTelegram(cartItems, totalPrice, form);
+      await sendOrderToTelegram(cartItems, totalPrice, form);
       
-      // 2. Backendga buyurtmani saqlash (Axios orqali)
-      const res = await axios.post('http://localhost:5000/api/auth/orders', {
+      // 2. Backendga buyurtmani saqlash - TO'G'RI YO'L
+      const res = await axiosInstance.post('/auth/orders', {
         items: cartItems,
         totalAmount: totalPrice,
         address: form.address,
@@ -42,16 +42,18 @@ function CheckoutModal({ isOpen, onClose, cartItems, totalPrice, clearCart }) {
           method: form.paymentMethod,
           months: form.paymentMethod === "installment" ? form.months : null
         }
-      }, { withCredentials: true });
+      });
 
       if (res.data.success) {
         toast.success(t("order_sent"));
         clearCart();
         onClose();
+      } else {
+        toast.error(t("order_error"));
       }
     } catch (error) {
       console.error("Order error:", error);
-      toast.error(t("order_error"));
+      toast.error(error.response?.data?.error || t("order_error"));
     } finally {
       setLoading(false);
     }
@@ -97,7 +99,6 @@ function CheckoutModal({ isOpen, onClose, cartItems, totalPrice, clearCart }) {
                 className="w-full p-3 border rounded-xl outline-none focus:border-blue-500"
               />
 
-              {/* To'lov usullari (Siz yuborgan kod kabi qoladi) */}
               <div>
                 <p className="font-medium mb-2">{t("payment_method")}</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -109,7 +110,6 @@ function CheckoutModal({ isOpen, onClose, cartItems, totalPrice, clearCart }) {
 
               {form.paymentMethod === "installment" && (
                 <div className="bg-slate-50 p-4 rounded-xl">
-                  {/* Muddatli to'lov oylari */}
                   <div className="grid grid-cols-3 gap-2">
                     {[3, 6, 12].map((m) => (
                       <button key={m} type="button" onClick={() => setForm({ ...form, months: m })} className={`py-2 rounded-xl text-sm ${form.months === m ? "bg-blue-600 text-white" : "bg-white border"}`}>
