@@ -3,8 +3,6 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -21,17 +19,23 @@ app.use(express.json());
 // ========== JWT SECRET ==========
 const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_secret_key_2026';
 
-// ========== POSTGRESQL ULANISH (SSL O'CHIRILGAN) ==========
+// ========== POSTGRESQL ULanish (SSL bilan, sertifikat tekshiruvi o'chirilgan) ==========
 let pool = null;
 let dbConnected = false;
 
 async function connectDatabase() {
   try {
-    console.log('📡 Ulanish urinilmoqda...');
+    console.log('📡 PostgreSQL ga ulanish...');
     
+    // Render internal connection - host, port, database, user, password bilan
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      connectionTimeoutMillis: 15000,
+      host: 'dpg-d80381hj2pic73euqa8g-a.frankfurt-postgres.render.com',
+      port: 5432,
+      database: 'shohrux_market',
+      user: 'shohrux_admin',
+      password: 'SaW9BiujCzAFxqlgSVAPVjOChTpqEh5a',
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
     });
     
     const client = await pool.connect();
@@ -53,6 +57,7 @@ async function connectDatabase() {
 async function createTables() {
   const client = await pool.connect();
   try {
+    // Users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -66,6 +71,7 @@ async function createTables() {
     `);
     console.log('✅ Users tablitsasi tayyor');
 
+    // Orders table
     await client.query(`
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
@@ -80,6 +86,7 @@ async function createTables() {
     `);
     console.log('✅ Orders tablitsasi tayyor');
 
+    // Test user
     const testUser = await client.query('SELECT * FROM users WHERE email = $1', ['test@mail.com']);
     if (testUser.rows.length === 0) {
       const hashedPassword = await bcrypt.hash('123456', 10);
@@ -88,6 +95,8 @@ async function createTables() {
         ['Test User', 'test@mail.com', '+998991234567', hashedPassword]
       );
       console.log('✅ Test user yaratildi: test@mail.com / 123456');
+    } else {
+      console.log('✅ Test user mavjud: test@mail.com / 123456');
     }
 
     console.log('🎉 DATABASE TAYYOR!');
