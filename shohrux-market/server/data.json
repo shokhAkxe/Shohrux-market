@@ -1,0 +1,156 @@
+{
+  "users": [
+    {
+      "id": 2,
+      "full_name": "shohrux",
+      "email": "sotimboyevshoxrux3@gmail.com",
+      "phone": "+998933679868",
+      "password": "$2a$10$ZH9QFcwvHJ2cyNwQuh4ndudYkfTatL.12eH0W.DQjOr6LMyOGrwNG",
+      "address": "Xorazm",
+      "orders": [
+        {
+          "id": 1778345455151,
+          "items": [
+            {
+              "id": 1,
+              "brand": "apple",
+              "cat": "phone",
+              "narxi": 16990000,
+              "img": "/images/iphone16pro.jpg",
+              "imgs": [
+                "/images/iphone16pro1.jpg",
+                "/images/iphone16pro2.jpg",
+                "/images/iphone16pro3.jpg"
+              ],
+              "nomi": {
+                "uz": "iPhone 16 Pro",
+                "en": "iPhone 16 Pro",
+                "ru": "iPhone 16 Pro"
+              },
+              "desc": {
+                "uz": "A18 Pro chipli eng kuchli iPhone. Titan korpus va 48MP kamera.",
+                "en": "The most powerful iPhone with A18 Pro chip",
+                "ru": "Самый мощный iPhone с чипом A18 Pro"
+              },
+              "specs": {
+                "uz": [
+                  "A18 Pro chip",
+                  "48MP kamera",
+                  "8GB RAM",
+                  "120Hz ProMotion"
+                ],
+                "en": [
+                  "A18 Pro chip",
+                  "48MP camera",
+                  "8GB RAM",
+                  "120Hz ProMotion"
+                ],
+                "ru": [
+                  "Чип A18 Pro",
+                  "48MP камера",
+                  "8GB RAM",
+                  "120Hz ProMotion"
+                ]
+              },
+              "rating": 4.9,
+              "quantity": 1
+            },
+            {
+              "id": 2,
+              "brand": "apple",
+              "cat": "phone",
+              "narxi": 14990000,
+              "img": "/images/iphone 15 pro.jpg",
+              "imgs": [
+                "/images/iphone15pro1.jpg",
+                "/images/iphone15pro2.jpg"
+              ],
+              "nomi": {
+                "uz": "iPhone 15 Pro Max",
+                "en": "iPhone 15 Pro Max",
+                "ru": "iPhone 15 Pro Max"
+              },
+              "desc": {
+                "uz": "A17 Pro chipli kuchli telefon. Titan korpus.",
+                "en": "Powerful phone with A17 Pro chip",
+                "ru": "Мощный телефон с чипом A17 Pro"
+              },
+              "specs": {
+                "uz": [
+                  "A17 Pro chip",
+                  "48MP kamera",
+                  "8GB RAM"
+                ],
+                "en": [
+                  "A17 Pro chip",
+                  "48MP camera",
+                  "8GB RAM"
+                ],
+                "ru": [
+                  "Чип A17 Pro",
+                  "48MP камера",
+                  "8GB RAM"
+                ]
+              },
+              "rating": 4.8,
+              "quantity": 1
+            }
+          ],
+          "total": 31980000,
+          "date": "2026-05-09T16:50:55.151Z",
+          "status": "pending"
+        },
+        {
+          "id": 1778345966879,
+          "items": [
+            {
+              "id": 3,
+              "brand": "apple",
+              "cat": "phone",
+              "narxi": 11990000,
+              "img": "/images/iphone15.jpg",
+              "imgs": [
+                "/images/iphone151.jpg",
+                "/images/iphone152.jpg"
+              ],
+              "nomi": {
+                "uz": "iPhone 15",
+                "en": "iPhone 15",
+                "ru": "iPhone 15"
+              },
+              "desc": {
+                "uz": "Dynamic Island va kuchli kamera",
+                "en": "Dynamic Island and powerful camera",
+                "ru": "Dynamic Island и мощная камера"
+              },
+              "specs": {
+                "uz": [
+                  "A16 chip",
+                  "48MP kamera",
+                  "6GB RAM"
+                ],
+                "en": [
+                  "A16 chip",
+                  "48MP camera",
+                  "6GB RAM"
+                ],
+                "ru": [
+                  "Чип A16",
+                  "48MP камера",
+                  "6GB RAM"
+                ]
+              },
+              "rating": 4.7,
+              "quantity": 1
+            }
+          ],
+          "total": 11990000,
+          "date": "2026-05-09T16:59:26.879Z",
+          "status": "pending"
+        }
+      ],
+      "createdAt": "2026-05-09T11:19:07.326Z"
+    }
+  ],
+  "nextId": 3
+}

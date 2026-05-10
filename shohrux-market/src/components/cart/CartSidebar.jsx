@@ -1,14 +1,30 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Minus, Trash2, ShoppingBag } from "lucide-react";
-import { useCartStore } from "../store/useCartStore";
+import { useCartStore } from "../../store/useCartStore";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../../context/AuthContext"; // Qo'shildi
+import { useNavigate } from "react-router-dom"; // Qo'shildi
+import toast from "react-hot-toast"; // Xabarlar uchun
 
 function CartSidebar({ isOpen, onClose, onCheckout }) {
   const { items, addToCart, decreaseQuantity, removeFromCart, clearCart } = useCartStore();
   const { t, i18n } = useTranslation();
+  const { user } = useAuth(); // AuthContext'dan user'ni olish
+  const navigate = useNavigate();
 
   const totalPrice = items.reduce((sum, item) => sum + item.narxi * (item.quantity || 1), 0);
   const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+
+  // Buyurtma berish tugmasi bosilganda ishlaydigan mantiq
+  const handleOrderClick = () => {
+    if (!user) {
+      toast.error(t("Iltimos, avval ro'yxatdan o'ting!"));
+      onClose(); // Sidebar'ni yopish
+      navigate("/login"); // Login sahifasiga yo'naltirish
+      return;
+    }
+    onCheckout(); // Agar kirgan bo'lsa, modalni ochish
+  };
 
   return (
     <AnimatePresence>
@@ -54,25 +70,10 @@ function CartSidebar({ isOpen, onClose, onCheckout }) {
                         <h3 className="font-medium text-sm">{name}</h3>
                         <p className="text-blue-600 font-bold text-sm">{item.narxi.toLocaleString()} so'm</p>
                         <div className="flex items-center gap-2 mt-2">
-                          <button
-                            onClick={() => decreaseQuantity(item.id)}
-                            className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow"
-                          >
-                            <Minus size={14} />
-                          </button>
+                          <button onClick={() => decreaseQuantity(item.id)} className="w-7 h-7 bg-white rounded-lg shadow"><Minus size={14} /></button>
                           <span className="font-medium w-6 text-center">{item.quantity || 1}</span>
-                          <button
-                            onClick={() => addToCart(item)}
-                            className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow"
-                          >
-                            <Plus size={14} />
-                          </button>
-                          <button
-                            onClick={() => removeFromCart(item.id)}
-                            className="ml-auto p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <button onClick={() => addToCart(item)} className="w-7 h-7 bg-white rounded-lg shadow"><Plus size={14} /></button>
+                          <button onClick={() => removeFromCart(item.id)} className="ml-auto p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                         </div>
                       </div>
                     </div>
@@ -88,7 +89,7 @@ function CartSidebar({ isOpen, onClose, onCheckout }) {
                   <span className="text-xl font-bold">{totalPrice.toLocaleString()} so'm</span>
                 </div>
                 <button
-                  onClick={onCheckout}
+                  onClick={handleOrderClick} // Yangilangan funksiya
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors"
                 >
                   {t("checkout")}

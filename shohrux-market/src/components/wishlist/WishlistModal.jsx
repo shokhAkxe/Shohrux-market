@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ShoppingBag, Trash2, Heart } from "lucide-react";
-import { useWishlistStore } from "../store/useWishlistStore";
-import { useCartStore } from "../store/useCartStore";
+import { useWishlistStore } from "../../store/useWishlistStore";
+import { useCartStore } from "../../store/useCartStore";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
@@ -65,13 +65,13 @@ function WishlistModal({ isOpen, onClose }) {
                           <div className="flex gap-2 mt-2">
                             <button
                               onClick={() => handleAddToCart(product)}
-                              className="flex-1 py-1.5 bg-blue-600 text-white text-xs rounded-lg"
+                              className="flex-1 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition"
                             >
                               {t("add_to_cart")}
                             </button>
                             <button
                               onClick={() => removeFromWishlist(product.id)}
-                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
                             >
                               <Trash2 size={16} />
                             </button>

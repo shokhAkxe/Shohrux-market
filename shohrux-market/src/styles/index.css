@@ -46,7 +46,6 @@
   }
 }
 
-/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -63,7 +62,6 @@
   background: #94a3b8;
 }
 
-/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;

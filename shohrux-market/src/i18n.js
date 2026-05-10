@@ -4,7 +4,6 @@ import { initReactI18next } from "react-i18next";
 const resources = {
   uz: {
     translation: {
-      // Navbar
       app_name: "SHOHRUX MARKET",
       search: "Qidirish",
       search_placeholder: "Nima qidiramiz? (masalan: iPhone)",
@@ -21,8 +20,6 @@ const resources = {
       close: "Yopish",
       settings: "Sozlamalar",
       language: "Til",
-
-      // Auth
       login_title: "Hisobingizga kiring",
       register_title: "Yangi hisob yarating",
       email: "Elektron pochta",
@@ -40,8 +37,6 @@ const resources = {
       passwords_not_match: "Parollar mos kelmadi!",
       login_success: "Kirish muvaffaqiyatli!",
       register_success: "Ro'yxatdan o'tdingiz!",
-
-      // Profile
       my_profile: "Mening profilim",
       personal_info: "Shaxsiy ma'lumotlar",
       order_history: "Buyurtmalar tarixi",
@@ -55,8 +50,6 @@ const resources = {
       account_deleted: "Hisob o'chirildi!",
       old_password: "Eski parol",
       new_password: "Yangi parol",
-
-      // Checkout
       checkout: "Buyurtma berish",
       confirm_order: "Buyurtmani tasdiqlash",
       name: "Ism va Familiya",
@@ -70,13 +63,9 @@ const resources = {
       monthly_payment: "Oylik to'lov",
       order_sent: "✅ Buyurtma muvaffaqiyatli yuborildi!",
       order_error: "❌ Xatolik yuz berdi.",
-
-      // Cart
       empty_cart: "Savat bo'sh",
       clear: "Tozalash",
       total: "Jami",
-
-      // Product
       add_to_cart: "Savatga qo'shish",
       added_to_cart: "Savatga qo'shildi!",
       added_to_wishlist: "Yoqtirilganlarga qo'shildi!",
@@ -85,15 +74,11 @@ const resources = {
       brand_products: "Shu brendning boshqa modellari",
       quantity: "Soni",
       total_price: "Jami",
-
-      // Categories
       all: "Barchasi",
       phone: "Telefonlar",
       laptop: "Noutbuklar",
       accessory: "Aksessuarlar",
       tablet: "Planshetlar",
-
-      // Sort
       default: "Saralash",
       price_low: "Narxi: Arzondan qimmatga",
       price_high: "Narxi: Qimmatdan arzonga",
@@ -103,6 +88,11 @@ const resources = {
       try_another_keyword: "Boshqa so'z bilan qidirib ko'ring",
       welcome: "Kelajak texnologiyalari bir qadam masofada",
       sort_by: "Saralash",
+      all_products: "Barcha mahsulotlar",
+home: "Bosh sahifa",
+about: "Biz haqimizda",
+contact: "Kontakt",
+products: "mahsulot",
     },
   },
   en: {
@@ -123,7 +113,6 @@ const resources = {
       close: "Close",
       settings: "Settings",
       language: "Language",
-
       login_title: "Login to your account",
       register_title: "Create new account",
       email: "Email",
@@ -141,7 +130,6 @@ const resources = {
       passwords_not_match: "Passwords do not match!",
       login_success: "Login successful!",
       register_success: "Registration successful!",
-
       my_profile: "My Profile",
       personal_info: "Personal Information",
       order_history: "Order History",
@@ -155,7 +143,6 @@ const resources = {
       account_deleted: "Account deleted!",
       old_password: "Old Password",
       new_password: "New Password",
-
       checkout: "Checkout",
       confirm_order: "Confirm Order",
       name: "Full Name",
@@ -169,11 +156,9 @@ const resources = {
       monthly_payment: "Monthly payment",
       order_sent: "✅ Order sent successfully!",
       order_error: "❌ An error occurred.",
-
       empty_cart: "Cart is empty",
       clear: "Clear",
       total: "Total",
-
       add_to_cart: "Add to Cart",
       added_to_cart: "Added to cart!",
       added_to_wishlist: "Added to wishlist!",
@@ -182,13 +167,11 @@ const resources = {
       brand_products: "Other models from this brand",
       quantity: "Quantity",
       total_price: "Total",
-
       all: "All",
       phone: "Phones",
       laptop: "Laptops",
       accessory: "Accessories",
       tablet: "Tablets",
-
       default: "Sort",
       price_low: "Price: Low to High",
       price_high: "Price: High to Low",
@@ -198,6 +181,11 @@ const resources = {
       try_another_keyword: "Try searching with another keyword",
       welcome: "Future technologies are just one step away",
       sort_by: "Sort by",
+      all_products: "All products",
+home: "Home",
+about: "About us", 
+contact: "Contact",
+products: "products",
     },
   },
   ru: {
@@ -218,7 +206,6 @@ const resources = {
       close: "Закрыть",
       settings: "Настройки",
       language: "Язык",
-
       login_title: "Войдите в аккаунт",
       register_title: "Создать аккаунт",
       email: "Электронная почта",
@@ -236,7 +223,6 @@ const resources = {
       passwords_not_match: "Пароли не совпадают!",
       login_success: "Вход выполнен!",
       register_success: "Регистрация успешна!",
-
       my_profile: "Мой профиль",
       personal_info: "Личная информация",
       order_history: "История заказов",
@@ -250,7 +236,6 @@ const resources = {
       account_deleted: "Аккаунт удален!",
       old_password: "Старый пароль",
       new_password: "Новый пароль",
-
       checkout: "Оформить заказ",
       confirm_order: "Подтвердить заказ",
       name: "Имя и Фамилия",
@@ -264,11 +249,9 @@ const resources = {
       monthly_payment: "Ежемесячный платеж",
       order_sent: "✅ Заказ отправлен!",
       order_error: "❌ Ошибка.",
-
       empty_cart: "Корзина пуста",
       clear: "Очистить",
       total: "Итого",
-
       add_to_cart: "В корзину",
       added_to_cart: "Добавлено!",
       added_to_wishlist: "Добавлено в избранное!",
@@ -277,13 +260,11 @@ const resources = {
       brand_products: "Другие модели этого бренда",
       quantity: "Количество",
       total_price: "Итого",
-
       all: "Все",
       phone: "Телефоны",
       laptop: "Ноутбуки",
       accessory: "Аксессуары",
       tablet: "Планшеты",
-
       default: "Сортировать",
       price_low: "Цена: по возрастанию",
       price_high: "Цена: по убыванию",
@@ -293,6 +274,11 @@ const resources = {
       try_another_keyword: "Попробуйте другое слово",
       welcome: "Технологии будущего в одном шаге",
       sort_by: "Сортировать",
+      all_products: "Все товары",
+home: "Главная", 
+about: "О нас",
+contact: "Контакты",
+products: "товаров",
     },
   },
 };

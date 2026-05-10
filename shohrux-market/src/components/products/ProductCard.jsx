@@ -1,11 +1,12 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { Heart, ShoppingBag } from "lucide-react";
-import { useCartStore } from "../store/useCartStore";
-import { useWishlistStore } from "../store/useWishlistStore";
+import { useCartStore } from "../../store/useCartStore";
+import { useWishlistStore } from "../../store/useWishlistStore";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
-function ProductCard({ product, onProductClick }) {
+const ProductCard = React.forwardRef(({ product, onProductClick }, ref) => {
   const { addToCart } = useCartStore();
   const { wishlist, toggleWishlist } = useWishlistStore();
   const { t, i18n } = useTranslation();
@@ -27,6 +28,7 @@ function ProductCard({ product, onProductClick }) {
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -36,14 +38,12 @@ function ProductCard({ product, onProductClick }) {
       onClick={() => onProductClick(product)}
       className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl border border-slate-100 cursor-pointer flex flex-col h-full transition-all duration-300"
     >
-      {/* Rasm qismi */}
       <div className="relative overflow-hidden h-52 sm:h-56 md:h-64 bg-gradient-to-br from-slate-100 to-slate-50">
         <img
           src={product.img}
           alt={productName}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
-        {/* Wishlist tugmasi */}
         <button
           onClick={handleToggleWishlist}
           className="absolute top-3 right-3 p-2.5 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-all shadow-md z-10"
@@ -53,13 +53,11 @@ function ProductCard({ product, onProductClick }) {
             className={`transition-all ${isInWishlist ? "fill-red-500 text-red-500" : "text-slate-600"}`}
           />
         </button>
-        {/* Kategoriya badge */}
         <span className="absolute bottom-3 left-3 text-[10px] font-bold text-white bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-full">
           {t(product.cat)}
         </span>
       </div>
 
-      {/* Ma'lumot qismi */}
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
@@ -96,6 +94,8 @@ function ProductCard({ product, onProductClick }) {
       </div>
     </motion.div>
   );
-}
+});
+
+ProductCard.displayName = "ProductCard";
 
 export default ProductCard;

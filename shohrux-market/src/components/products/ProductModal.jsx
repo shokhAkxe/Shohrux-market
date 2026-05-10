@@ -1,11 +1,11 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Heart, Minus, Plus, ShoppingBag, Star, ChevronLeft, ChevronRight, Maximize2, XCircle } from "lucide-react";
-import { useCartStore } from "../store/useCartStore";
-import { useWishlistStore } from "../store/useWishlistStore";
+import { useCartStore } from "../../store/useCartStore";
+import { useWishlistStore } from "../../store/useWishlistStore";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import products from "../data/products";
+import products from "../../data/products";
 
 function ProductModal({ product, onClose, onProductClick }) {
   const { addToCart } = useCartStore();
@@ -85,7 +85,6 @@ function ProductModal({ product, onClose, onProductClick }) {
             className="bg-white w-full max-w-6xl rounded-3xl overflow-hidden max-h-[95vh] overflow-y-auto shadow-2xl"
           >
             <div className="relative p-6 md:p-8">
-              {/* Yopish tugmasi */}
               <motion.button
                 whileHover={{ scale: 1.05, rotate: 90 }}
                 whileTap={{ scale: 0.95 }}
@@ -96,7 +95,6 @@ function ProductModal({ product, onClose, onProductClick }) {
               </motion.button>
 
               <div className="grid md:grid-cols-2 gap-8">
-                {/* Rasm Galereyasi */}
                 <div>
                   <div 
                     className="relative bg-gradient-to-br from-slate-100 to-slate-50 rounded-3xl h-80 md:h-[450px] overflow-hidden"
@@ -115,9 +113,6 @@ function ProductModal({ product, onClose, onProductClick }) {
                         initial={{ opacity: 0, scale: 1 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.3 }}
-                        style={{
-                          objectPosition: "center 30%"
-                        }}
                       />
                     </div>
                     
@@ -199,7 +194,6 @@ function ProductModal({ product, onClose, onProductClick }) {
                   )}
                 </div>
 
-                {/* Mahsulot ma'lumotlari */}
                 <motion.div
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -322,7 +316,6 @@ function ProductModal({ product, onClose, onProductClick }) {
                     </p>
                   </motion.div>
 
-                  {/* Tugmalar - faqat Savatga qo'shish va Yoqtirish */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -351,7 +344,6 @@ function ProductModal({ product, onClose, onProductClick }) {
                 </motion.div>
               </div>
 
-              {/* O'xshash mahsulotlar */}
               {related.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
@@ -397,7 +389,6 @@ function ProductModal({ product, onClose, onProductClick }) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Fullscreen Rasm Modal */}
       <AnimatePresence>
         {isFullscreenOpen && selectedFullImage && (
           <motion.div

@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  full_name String
+  email     String   @unique
+  phone     String?
+  password  String
+  address   String?  @default("")
+  createdAt DateTime @default(now())
+  orders    Order[]  // User va Order o'rtasidagi bog'liqlik
+}
+
+model Order {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: id)
+  items       Json     // Savatdagi mahsulotlar (nomi, narxi, soni)
+  totalAmount Float
+  address     String
+  status      String   @default("pending") // pending, shipping, delivered
+  createdAt   DateTime @default(now())
+}
