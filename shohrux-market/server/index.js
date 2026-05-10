@@ -2,272 +2,297 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
-const fs = require('fs');
-const path = require('path');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
 
-// ========== CORS SOZLAMALARI ==========
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'https://shohrux-market-shohrux-s-projects.vercel.app',
-  'https://shohrux-market.vercel.app',
-  process.env.FRONTEND_URL
-].filter(Boolean);
-
+// ========== CORS ==========
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log('❌ Blocked CORS origin:', origin);
-      callback(null, true);
-    }
-  },
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'https://shohrux-market-shohrux-s-projects.vercel.app',
+    'https://shohrux-market.vercel.app'
+  ],
   credentials: false,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.options('*', cors());
 app.use(express.json());
-app.use(cookieParser());
 
-console.log("🚀 Server starting...");
-console.log("📁 Using FILE-BASED storage (data.json)");
+// ========== POSTGRESQL CONNECTION ==========
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+    require: true
+  },
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 20
+});
 
-// ========== FILE STORAGE ==========
-const DATA_FILE = path.join(__dirname, 'data.json');
-let users = [];
-let nextId = 1;
+pool.on('error', (err) => {
+  console.error('❌ Database pool error:', err.message);
+});
 
-try {
-  if (fs.existsSync(DATA_FILE)) {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-    users = data.users || [];
-    nextId = data.nextId || users.length + 1;
-    console.log(`📂 Loaded ${users.length} users from file`);
-  } else {
-    const salt = bcrypt.genSaltSync(10);
-    users = [{
-      id: 1,
-      full_name: 'Test User',
-      email: 'test@mail.com',
-      phone: '+998991234567',
-      password: bcrypt.hashSync('123456', salt),
-      address: '',
-      orders: [],
-      createdAt: new Date().toISOString()
-    }];
-    nextId = 2;
-    saveData();
-    console.log('📝 Created test user: test@mail.com / 123456');
-  }
-} catch (err) {
-  console.error('Error loading data:', err);
-}
-
-function saveData() {
+// ========== CREATE TABLES ==========
+const initDB = async () => {
+  let client;
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ users, nextId }, null, 2));
-    console.log(`💾 Saved ${users.length} users to file`);
+    client = await pool.connect();
+    console.log('✅ PostgreSQL connected');
+    
+    // Users table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        full_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        phone VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        address TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Users table ready');
+
+    // Orders table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        items JSONB NOT NULL,
+        total_amount BIGINT NOT NULL,
+        address TEXT NOT NULL,
+        payment_method VARCHAR(50),
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Orders table ready');
+
+    // Test user (agar mavjud bo'lmasa)
+    const testUser = await client.query('SELECT * FROM users WHERE email = $1', ['test@mail.com']);
+    if (testUser.rows.length === 0) {
+      const hashedPassword = await bcrypt.hash('123456', 10);
+      await client.query(
+        'INSERT INTO users (full_name, email, phone, password) VALUES ($1, $2, $3, $4)',
+        ['Test User', 'test@mail.com', '+998991234567', hashedPassword]
+      );
+      console.log('✅ Test user created: test@mail.com / 123456');
+    } else {
+      console.log('✅ Test user already exists');
+    }
+
+    console.log('🎉 Database initialization complete!');
   } catch (err) {
-    console.error('Error saving data:', err);
+    console.error('❌ Database init error:', err.message);
+    if (err.message.includes('ECONNRESET')) {
+      console.error('   ⚠️ Connection reset - retrying in 5 seconds...');
+      setTimeout(initDB, 5000);
+    }
+  } finally {
+    if (client) client.release();
   }
-}
+};
+
+// Start database connection
+initDB();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mysecretkey12345';
 
 // ========== MIDDLEWARE ==========
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Access denied' });
-  }
+  if (!token) return res.status(401).json({ error: 'No token' });
   try {
-    const verified = jwt.verify(token, JWT_SECRET);
-    req.user = verified;
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.id;
     next();
-  } catch (error) {
+  } catch {
     res.status(401).json({ error: 'Invalid token' });
   }
 };
 
-// ========== AUTH ROUTES ==========
+// ========== ROUTES ==========
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // REGISTER
 app.post('/api/auth/register', async (req, res) => {
+  let client;
   try {
     const { full_name, email, phone, password } = req.body;
-    console.log("📝 Register request:", { full_name, email, phone });
+    console.log("📝 Register:", email);
+
+    client = await pool.connect();
     
-    const existingUser = users.find(u => u.email === email || u.phone === phone);
-    if (existingUser) {
+    const existing = await client.query(
+      'SELECT * FROM users WHERE email = $1 OR phone = $2',
+      [email, phone]
+    );
+    if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'User already exists' });
     }
-    
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    
-    const user = {
-      id: nextId++,
-      full_name,
-      email,
-      phone,
-      password: hashedPassword,
-      address: '',
-      orders: [],
-      createdAt: new Date().toISOString()
-    };
-    
-    users.push(user);
-    saveData();
-    
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await client.query(
+      'INSERT INTO users (full_name, email, phone, password) VALUES ($1, $2, $3, $4) RETURNING id, full_name, email, phone, address',
+      [full_name, email, phone, hashedPassword]
+    );
+
+    const user = result.rows[0];
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    
-    res.json({ success: true, user: { id: user.id, full_name, email, phone }, token });
+
+    res.json({ success: true, user, token });
   } catch (error) {
-    console.error("Register error:", error);
+    console.error('Register error:', error);
     res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
   }
 });
 
 // LOGIN
 app.post('/api/auth/login', async (req, res) => {
+  let client;
   try {
     const { emailOrPhone, password } = req.body;
-    console.log("🔐 Login request:", { emailOrPhone });
+    console.log("🔐 Login:", emailOrPhone);
+
+    client = await pool.connect();
     
-    const user = users.find(u => u.email === emailOrPhone || u.phone === emailOrPhone);
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid credentials' });
-    }
-    
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(400).json({ error: 'Invalid credentials' });
-    }
-    
+    const result = await client.query(
+      'SELECT * FROM users WHERE email = $1 OR phone = $1',
+      [emailOrPhone]
+    );
+
+    const user = result.rows[0];
+    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(400).json({ error: 'Invalid credentials' });
+
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    
-    res.json({ success: true, user: { id: user.id, full_name: user.full_name, email: user.email, phone: user.phone }, token });
+
+    res.json({
+      success: true,
+      user: { id: user.id, full_name: user.full_name, email: user.email, phone: user.phone, address: user.address },
+      token
+    });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error('Login error:', error);
     res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
   }
 });
 
-// GET CURRENT USER
-app.get('/api/auth/me', verifyToken, (req, res) => {
+// GET ME
+app.get('/api/auth/me', verifyToken, async (req, res) => {
+  let client;
   try {
-    const user = users.find(u => u.id === req.user.id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    const { password, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+    client = await pool.connect();
+    const result = await client.query(
+      'SELECT id, full_name, email, phone, address, created_at FROM users WHERE id = $1',
+      [req.userId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// ADD ORDER
+app.post('/api/auth/orders', verifyToken, async (req, res) => {
+  let client;
+  try {
+    const { items, totalAmount, address, paymentDetails } = req.body;
+    
+    client = await pool.connect();
+    
+    const result = await client.query(
+      `INSERT INTO orders (user_id, items, total_amount, address, payment_method) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.userId, JSON.stringify(items), totalAmount, address, paymentDetails?.method || 'cash']
+    );
+    
+    console.log(`📦 New order from user ${req.userId}: ${totalAmount?.toLocaleString()} so'm`);
+    
+    res.json({ success: true, order: result.rows[0] });
+  } catch (error) {
+    console.error('Add order error:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// GET ORDERS
+app.get('/api/auth/orders', verifyToken, async (req, res) => {
+  let client;
+  try {
+    client = await pool.connect();
+    const result = await client.query(
+      'SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
   }
 });
 
 // UPDATE PROFILE
-app.put('/api/auth/profile', verifyToken, (req, res) => {
+app.put('/api/auth/profile', verifyToken, async (req, res) => {
+  let client;
   try {
     const { full_name, email, phone, address } = req.body;
-    const userIndex = users.findIndex(u => u.id === req.user.id);
-    
-    if (userIndex === -1) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    users[userIndex] = { ...users[userIndex], full_name, email, phone, address };
-    saveData();
-    
-    const { password, ...userWithoutPassword } = users[userIndex];
-    res.json(userWithoutPassword);
+    client = await pool.connect();
+    await client.query(
+      'UPDATE users SET full_name = $1, email = $2, phone = $3, address = $4 WHERE id = $5',
+      [full_name, email, phone, address, req.userId]
+    );
+    res.json({ success: true, full_name, email, phone, address });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
   }
 });
 
 // CHANGE PASSWORD
 app.put('/api/auth/change-password', verifyToken, async (req, res) => {
+  let client;
   try {
     const { oldPassword, newPassword } = req.body;
-    const userIndex = users.findIndex(u => u.id === req.user.id);
+    client = await pool.connect();
     
-    if (userIndex === -1) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    const result = await client.query('SELECT password FROM users WHERE id = $1', [req.userId]);
+    const user = result.rows[0];
     
-    const validPassword = await bcrypt.compare(oldPassword, users[userIndex].password);
-    if (!validPassword) {
-      return res.status(400).json({ error: 'Old password is incorrect' });
-    }
+    const valid = await bcrypt.compare(oldPassword, user.password);
+    if (!valid) return res.status(400).json({ error: 'Old password is incorrect' });
     
-    const salt = await bcrypt.genSalt(10);
-    users[userIndex].password = await bcrypt.hash(newPassword, salt);
-    saveData();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, req.userId]);
     
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
-  }
-});
-
-// ADD ORDER
-app.post('/api/auth/orders', verifyToken, (req, res) => {
-  try {
-    const { items, totalAmount, address, paymentDetails } = req.body;
-    const userIndex = users.findIndex(u => u.id === req.user.id);
-    
-    if (userIndex === -1) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    const order = {
-      id: Date.now(),
-      items: items || [],
-      totalAmount: totalAmount || items?.reduce((sum, item) => sum + (item.narxi * (item.quantity || 1)), 0),
-      total: totalAmount || items?.reduce((sum, item) => sum + (item.narxi * (item.quantity || 1)), 0),
-      address: address || '',
-      paymentDetails: paymentDetails || {},
-      date: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      status: 'pending'
-    };
-    
-    users[userIndex].orders = [...(users[userIndex].orders || []), order];
-    saveData();
-    
-    console.log(`📦 YANGI BUYURTMA!`);
-    console.log(`   👤 User: ${users[userIndex].email}`);
-    console.log(`   💰 Jami: ${order.totalAmount.toLocaleString()} so'm`);
-    console.log(`   📦 Mahsulotlar: ${order.items.length} ta`);
-    
-    res.json({ success: true, order });
-  } catch (error) {
-    console.error("Add order error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET ORDERS
-app.get('/api/auth/orders', verifyToken, (req, res) => {
-  try {
-    const user = users.find(u => u.id === req.user.id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    res.json(user.orders || []);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } finally {
+    if (client) client.release();
   }
 });
 
@@ -276,20 +301,7 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// HEALTH CHECK
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// DEBUG
-app.get('/api/users', (req, res) => {
-  const usersWithoutPassword = users.map(({ password, ...rest }) => rest);
-  res.json(usersWithoutPassword);
-});
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📁 Data saved to: ${DATA_FILE}`);
-  console.log(`👥 Users count: ${users.length}`);
 });
