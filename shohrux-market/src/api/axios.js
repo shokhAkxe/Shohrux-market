@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-// TO'G'RI URL - backend aslida shu manzilda
+// TO'G'RI BACKEND URL
 const API_URL = 'https://shohrux-market.onrender.com/api';
 
 const axiosInstance = axios.create({
@@ -10,7 +10,7 @@ const axiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
 // Request interceptor
@@ -20,7 +20,6 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log(`📤 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     return config;
   },
   (error) => Promise.reject(error)
@@ -28,16 +27,12 @@ axiosInstance.interceptors.request.use(
 
 // Response interceptor
 axiosInstance.interceptors.response.use(
-  (response) => {
-    console.log(`📥 Response ${response.status}: ${response.config.url}`);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.status, error.response?.data);
-    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.dispatchEvent(new CustomEvent('auth-logout'));
+      localStorage.removeItem('user');
+      window.location.href = '/';
     }
     
     const message = error.response?.data?.error || 'Tarmoq xatoligi!';
