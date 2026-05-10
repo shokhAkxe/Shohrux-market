@@ -9,11 +9,28 @@ require('dotenv').config();
 const app = express();
 const prisma = new PrismaClient();
 
+// Netlify havolangizni bu yerga qo'shing
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://marketshox.netlify.app' // O'zingizning Netlify linkigizni shu yerga qo'ying
+];
+
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
-  credentials: true
+  origin: function (origin, callback) {
+    // Agar origin ro'yxatda bo'lsa yoki origin bo'lmasa (masalan, mobil ilovalar/Postman)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS xatosi: Ushbu saytdan so\'rov yuborish taqiqlangan'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(cookieParser());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_2026';
@@ -35,11 +52,15 @@ const verifyToken = (req, res, next) => {
 // ==================== USER ROUTES ====================
 
 app.get('/api/auth/profile', verifyToken, async (req, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: Number(req.user.id) },
-    select: { id: true, full_name: true, email: true, phone: true, address: true }
-  });
-  res.json(user);
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: Number(req.user.id) },
+      select: { id: true, full_name: true, email: true, phone: true, address: true }
+    });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put('/api/auth/profile', verifyToken, async (req, res) => {
@@ -55,14 +76,12 @@ app.put('/api/auth/profile', verifyToken, async (req, res) => {
   }
 });
 
-// ==================== ORDER ROUTES (BUYURTMA BERISH) ====================
+// ==================== ORDER ROUTES ====================
 
-// 1. Yangi buyurtma yaratish
 app.post('/api/auth/orders', verifyToken, async (req, res) => {
   try {
     const { items, totalAmount, address } = req.body;
 
-    // Xavfsizlik: Bo'sh buyurtma berishni oldini olish
     if (!items || items.length === 0) {
       return res.status(400).json({ error: "Savat bo'sh bo'lishi mumkin emas" });
     }
@@ -84,7 +103,6 @@ app.post('/api/auth/orders', verifyToken, async (req, res) => {
   }
 });
 
-// 2. Foydalanuvchi buyurtmalar tarixini olish
 app.get('/api/auth/orders', verifyToken, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
@@ -98,34 +116,50 @@ app.get('/api/auth/orders', verifyToken, async (req, res) => {
 });
 
 // ==================== AUTH LOGIC ====================
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true, // Render'da HTTPS bo'lgani uchun true bo'lishi kerak
+  sameSite: 'none', // Netlify va Render orasida ishlashi uchun shart
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 kun
+};
+
 app.post('/api/auth/register', async (req, res) => {
-  const { full_name, email, phone, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: { full_name, email, phone, password: hashedPassword }
-  });
-  const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax' });
-  res.json({ success: true, user });
+  try {
+    const { full_name, email, phone, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { full_name, email, phone, password: hashedPassword }
+    });
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('token', token, COOKIE_OPTIONS);
+    res.json({ success: true, user: { id: user.id, full_name: user.full_name, email: user.email } });
+  } catch (err) {
+    res.status(400).json({ error: "Registratsiyada xatolik: " + err.message });
+  }
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { emailOrPhone, password } = req.body;
-  const user = await prisma.user.findFirst({
-    where: { OR: [{ email: emailOrPhone }, { phone: emailOrPhone }] }
-  });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(400).json({ error: 'Login yoki parol xato' });
+  try {
+    const { emailOrPhone, password } = req.body;
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ email: emailOrPhone }, { phone: emailOrPhone }] }
+    });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(400).json({ error: 'Login yoki parol xato' });
+    }
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('token', token, COOKIE_OPTIONS);
+    res.json({ success: true, user: { id: user.id, full_name: user.full_name, email: user.email } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax' });
-  res.json({ success: true, user });
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', COOKIE_OPTIONS);
   res.json({ success: true });
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server: http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
