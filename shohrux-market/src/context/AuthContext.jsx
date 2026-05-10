@@ -1,7 +1,5 @@
-// src/context/AuthContext.jsx - TO'LIQ KOD
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authAPI } from '../api/auth';
+import axiosInstance from '../api/axios';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
@@ -18,112 +16,82 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      loadUser();
-    } else {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await axiosInstance.get('/api/auth/profile');
+          setUser(response.data);
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error("Profil yuklashda xato:", error);
+          localStorage.removeItem('token');
+        }
+      }
       setLoading(false);
-    }
-    
-    const handleLogout = () => {
-      logout();
     };
+    checkAuth();
+
+    const handleLogout = () => logout();
     window.addEventListener('auth-logout', handleLogout);
     return () => window.removeEventListener('auth-logout', handleLogout);
   }, []);
 
-  const loadUser = async () => {
-    try {
-      const response = await authAPI.getMe();
-      setUser(response.data);
-      setIsAuthenticated(true);
-    } catch (error) {
-      console.error("Load user error:", error);
-      localStorage.removeItem('token');
-      setUser(null);
-      setIsAuthenticated(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 1. Register
   const register = async (userData) => {
     try {
-      console.log("Register API ga yuborilmoqda:", userData);
-      const response = await authAPI.register(userData);
-      console.log("Register javobi:", response.data);
-      
+      const response = await axiosInstance.post('/api/auth/register', userData);
       const { user, token } = response.data;
-      localStorage.setItem('token', token);
+      if (token) localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
-      toast.success('Ro\'yxatdan o\'tish muvaffaqiyatli!');
+      toast.success("Ro'yxatdan o'tish muvaffaqiyatli!");
       return { success: true };
     } catch (error) {
-      console.error("Register xatosi:", error);
-      console.error("Error response:", error.response);
-      const errorMsg = error.response?.data?.error || 'Ro\'yxatdan o\'tishda xatolik';
-      toast.error(errorMsg);
-      return { success: false, error: errorMsg };
-    }
-  };
-
-  const login = async (emailOrPhone, password) => {
-    try {
-      console.log("Login API ga yuborilmoqda:", { emailOrPhone, password });
-      const response = await authAPI.login({ emailOrPhone, password });
-      console.log("Login javobi:", response.data);
-      
-      const { user, token } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      setIsAuthenticated(true);
-      toast.success('Kirish muvaffaqiyatli!');
-      return { success: true };
-    } catch (error) {
-      console.error("Login xatosi:", error);
-      console.error("Error response:", error.response);
-      const errorMsg = error.response?.data?.error || 'Kirishda xatolik';
-      toast.error(errorMsg);
-      return { success: false, error: errorMsg };
-    }
-  };
-
-  const googleLogin = async (googleData) => {
-    try {
-      console.log("Google login:", googleData);
-      const response = await authAPI.googleLogin(googleData);
-      const { user, token } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      setIsAuthenticated(true);
-      toast.success('Kirish muvaffaqiyatli!');
-      return { success: true };
-    } catch (error) {
-      console.error("Google login xatosi:", error);
-      toast.error('Google login failed');
+      const msg = error.response?.data?.error || "Ro'yxatdan o'tishda xatolik";
+      toast.error(msg);
       return { success: false };
     }
   };
 
+  // 2. Login
+  const login = async (emailOrPhone, password) => {
+    try {
+      const response = await axiosInstance.post('/api/auth/login', { emailOrPhone, password });
+      const { user, token } = response.data;
+      if (token) localStorage.setItem('token', token);
+      setUser(user);
+      setIsAuthenticated(true);
+      toast.success('Xush kelibsiz!');
+      return { success: true };
+    } catch (error) {
+      const msg = error.response?.data?.error || 'Kirishda xatolik';
+      toast.error(msg);
+      return { success: false };
+    }
+  };
+
+  // 3. Logout
   const logout = async () => {
     try {
-      await authAPI.logout();
+      await axiosInstance.post('/api/auth/logout');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('token');
       setUser(null);
       setIsAuthenticated(false);
-      toast.success('Chiqildi');
+      toast.success('Tizimdan chiqildi');
     }
   };
 
-  const updateProfile = async (data) => {
+  // 4. Profilni yangilash (Update Profile)
+  const updateProfile = async (profileData) => {
     try {
-      const response = await authAPI.updateProfile(data);
+      // Backendda bu route PUT /api/auth/profile bo'lishi kerak
+      const response = await axiosInstance.put('/api/auth/profile', profileData);
       setUser(response.data);
-      toast.success('Profil yangilandi!');
+      toast.success('Profil muvaffaqiyatli yangilandi!');
       return { success: true };
     } catch (error) {
       toast.error(error.response?.data?.error || 'Yangilashda xatolik');
@@ -131,38 +99,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const changePassword = async (oldPassword, newPassword) => {
-    try {
-      await authAPI.changePassword({ oldPassword, newPassword });
-      toast.success('Parol o\'zgartirildi!');
-      return { success: true };
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Parol o\'zgartirishda xatolik');
-      return { success: false, error: error.response?.data?.error };
-    }
-  };
-
+  // 5. Buyurtma berish (Add Order)
   const addOrder = async (orderData) => {
     try {
-      const response = await authAPI.addOrder(orderData);
-      console.log("Buyurtma qo'shildi:", response.data);
-      toast.success('Buyurtma qabul qilindi!');
-      return { success: true };
+      const response = await axiosInstance.post('/api/auth/orders', orderData);
+      toast.success('Buyurtmangiz qabul qilindi!');
+      return { success: true, order: response.data };
     } catch (error) {
-      console.error('Add order error:', error);
-      toast.error('Buyurtma berishda xatolik');
+      console.error('Order error:', error);
+      toast.error('Buyurtma berishda xatolik yuz berdi');
       return { success: false };
     }
   };
 
-  // YANGI - buyurtmalarni olish
+  // 6. Buyurtmalarni olish (Get Orders)
   const getOrders = async () => {
     try {
-      const response = await authAPI.getOrders();
-      console.log("Buyurtmalar olindi:", response.data);
+      const response = await axiosInstance.get('/api/auth/orders');
       return { success: true, orders: response.data };
     } catch (error) {
-      console.error('Get orders error:', error);
+      console.error('Orders fetch error:', error);
       return { success: false, orders: [] };
     }
   };
@@ -174,14 +130,12 @@ export const AuthProvider = ({ children }) => {
       loading,
       register,
       login,
-      googleLogin,
       logout,
       updateProfile,
-      changePassword,
       addOrder,
-      getOrders, // YANGI QO'SHILDI
+      getOrders
     }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

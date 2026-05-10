@@ -1,15 +1,24 @@
-// src/api/auth.js - TO'LIQ KOD
-
-import axios from './axios';
+import axiosInstance from './axios'; // Sizdagi axiosInstance fayli
 
 export const authAPI = {
-  register: (data) => axios.post('/auth/register', data),
-  login: (data) => axios.post('/auth/login', data),
-  googleLogin: (data) => axios.post('/auth/google', data),
-  logout: () => axios.post('/auth/logout'),
-  getMe: () => axios.get('/auth/me'),
-  updateProfile: (data) => axios.put('/auth/profile', data),
-  changePassword: (data) => axios.put('/auth/change-password', data),
-  addOrder: (data) => axios.post('/auth/orders', data),
-  getOrders: () => axios.get('/auth/orders'), // YANGI - buyurtmalarni olish
+  // Ro'yxatdan o'tish
+  register: (userData) => axiosInstance.post('/api/auth/register', userData),
+  
+  // Kirish
+  login: (credentials) => axiosInstance.post('/api/auth/login', credentials),
+  
+  // Profilni olish
+  getMe: () => axiosInstance.get('/api/auth/profile'),
+  
+  // Chiqish
+  logout: () => axiosInstance.post('/api/auth/logout'),
+  
+  // Buyurtma berish
+  addOrder: (orderData) => axiosInstance.post('/api/auth/orders', orderData),
+  
+  // Buyurtmalarni olish
+  getOrders: () => axiosInstance.get('/api/auth/orders'),
+  
+  // Profilni yangilash
+  updateProfile: (data) => axiosInstance.put('/api/auth/profile', data),
 };
