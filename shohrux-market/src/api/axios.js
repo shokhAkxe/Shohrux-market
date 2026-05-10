@@ -1,29 +1,32 @@
 import axios from 'axios';
 
-// To'g'ridan-to'g'ri Render linkini yozamiz
 const API_URL = 'https://market-api.onrender.com/api';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
-  withCredentials: true,
+  withCredentials: true,  // Bu stay true
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor - tokenni avtomatik qo'shish
+// Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Muhim: OPTIONS so'rovlarida Authorization header bo'lmasligi kerak
+    if (config.method === 'options') {
+      delete config.headers.Authorization;
+    }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - token expired bo'lsa
+// Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
