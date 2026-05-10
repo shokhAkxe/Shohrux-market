@@ -1,24 +1,27 @@
-import axiosInstance from './axios'; // Sizdagi axiosInstance fayli
+import axiosInstance from './axios';
 
 export const authAPI = {
   // Ro'yxatdan o'tish
-  register: (userData) => axiosInstance.post('/api/auth/register', userData),
+  register: (userData) => axiosInstance.post('/auth/register', userData),
   
   // Kirish
-  login: (credentials) => axiosInstance.post('/api/auth/login', credentials),
+  login: (credentials) => axiosInstance.post('/auth/login', credentials),
   
   // Profilni olish
-  getMe: () => axiosInstance.get('/api/auth/profile'),
-  
-  // Chiqish
-  logout: () => axiosInstance.post('/api/auth/logout'),
-  
-  // Buyurtma berish
-  addOrder: (orderData) => axiosInstance.post('/api/auth/orders', orderData),
-  
-  // Buyurtmalarni olish
-  getOrders: () => axiosInstance.get('/api/auth/orders'),
+  getMe: () => axiosInstance.get('/auth/me'),
   
   // Profilni yangilash
-  updateProfile: (data) => axiosInstance.put('/api/auth/profile', data),
+  updateProfile: (data) => axiosInstance.put('/auth/profile', data),
+  
+  // Parolni o'zgartirish
+  changePassword: (data) => axiosInstance.put('/auth/change-password', data),
+  
+  // Buyurtma berish
+  addOrder: (orderData) => axiosInstance.post('/auth/orders', orderData),
+  
+  // Buyurtmalarni olish
+  getOrders: () => axiosInstance.get('/auth/orders'),
+  
+  // Chiqish
+  logout: () => axiosInstance.post('/auth/logout'),
 };
