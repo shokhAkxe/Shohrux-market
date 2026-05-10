@@ -3,7 +3,6 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
-const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -17,30 +16,26 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// ========== JWT SECRET ==========
 const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_secret_key_2026';
 
-// ========== POSTGRESQL POOL ==========
+// ========== POSTGRESQL - SSL TUZATILGAN ==========
 let pool = null;
 let dbConnected = false;
 
-// Database ulanish funksiyasi
 async function connectDatabase() {
   try {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: false,  // SSL ni vaqtincha o'chirib turamiz
       connectionTimeoutMillis: 10000,
     });
     
-    // Test connection
     const client = await pool.connect();
     await client.query('SELECT NOW()');
     console.log('✅ PostgreSQL connected successfully!');
     client.release();
     dbConnected = true;
     
-    // Create tables
     await createTables();
     
   } catch (err) {
@@ -51,11 +46,9 @@ async function connectDatabase() {
   }
 }
 
-// Create tables
 async function createTables() {
   const client = await pool.connect();
   try {
-    // Users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -69,7 +62,6 @@ async function createTables() {
     `);
     console.log('✅ Users table ready');
 
-    // Orders table
     await client.query(`
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
@@ -84,7 +76,6 @@ async function createTables() {
     `);
     console.log('✅ Orders table ready');
 
-    // Test user
     const testUser = await client.query('SELECT * FROM users WHERE email = $1', ['test@mail.com']);
     if (testUser.rows.length === 0) {
       const hashedPassword = await bcrypt.hash('123456', 10);
@@ -104,7 +95,7 @@ async function createTables() {
   }
 }
 
-// Start database connection
+// Database ulanishni boshlash
 connectDatabase();
 
 // ========== MIDDLEWARE ==========
@@ -122,7 +113,7 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// ========== HEALTH CHECKS ==========
+// ========== HEALTH CHECK ==========
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -149,17 +140,15 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'All fields are required!' });
     }
 
-    // Check if user exists
     const existing = await client.query(
       'SELECT * FROM users WHERE email = $1 OR phone = $2',
       [email, phone]
     );
     
     if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'User with this email or phone already exists!' });
+      return res.status(400).json({ error: 'User already exists!' });
     }
 
-    // Create user
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await client.query(
       `INSERT INTO users (full_name, email, phone, password) 
@@ -171,16 +160,11 @@ app.post('/api/auth/register', async (req, res) => {
     const user = result.rows[0];
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-    res.json({ 
-      success: true, 
-      message: 'Registration successful!',
-      user, 
-      token 
-    });
+    res.json({ success: true, message: 'Registration successful!', user, token });
     
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ error: 'Server error. Please try again!' });
+    res.status(500).json({ error: 'Server error!' });
   } finally {
     client.release();
   }
@@ -189,7 +173,7 @@ app.post('/api/auth/register', async (req, res) => {
 // ========== LOGIN ==========
 app.post('/api/auth/login', async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database is not connected. Please try again!' });
+    return res.status(503).json({ error: 'Database is not connected!' });
   }
   
   const client = await pool.connect();
@@ -200,7 +184,6 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email/Phone and password are required!' });
     }
 
-    // Find user
     const result = await client.query(
       'SELECT * FROM users WHERE email = $1 OR phone = $1',
       [emailOrPhone]
@@ -211,13 +194,11 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'User not found!' });
     }
 
-    // Check password
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return res.status(400).json({ error: 'Invalid password!' });
     }
 
-    // Generate token
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
@@ -235,16 +216,16 @@ app.post('/api/auth/login', async (req, res) => {
     
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Server error. Please try again!' });
+    res.status(500).json({ error: 'Server error!' });
   } finally {
     client.release();
   }
 });
 
-// ========== GET CURRENT USER ==========
+// GET CURRENT USER
 app.get('/api/auth/me', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database is not connected!' });
+    return res.status(503).json({ error: 'Database not connected!' });
   }
   
   const client = await pool.connect();
@@ -260,17 +241,16 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Get user error:', error);
     res.status(500).json({ error: 'Server error!' });
   } finally {
     client.release();
   }
 });
 
-// ========== UPDATE PROFILE ==========
+// UPDATE PROFILE
 app.put('/api/auth/profile', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database is not connected!' });
+    return res.status(503).json({ error: 'Database not connected!' });
   }
   
   const client = await pool.connect();
@@ -278,61 +258,51 @@ app.put('/api/auth/profile', verifyToken, async (req, res) => {
     const { full_name, email, phone, address } = req.body;
     
     await client.query(
-      `UPDATE users 
-       SET full_name = $1, email = $2, phone = $3, address = $4 
-       WHERE id = $5`,
+      `UPDATE users SET full_name = $1, email = $2, phone = $3, address = $4 WHERE id = $5`,
       [full_name, email, phone, address || '', req.userId]
     );
     
-    res.json({ 
-      success: true, 
-      message: 'Profile updated successfully!'
-    });
+    res.json({ success: true, message: 'Profile updated successfully!' });
   } catch (error) {
-    console.error('Update profile error:', error);
     res.status(500).json({ error: 'Update failed!' });
   } finally {
     client.release();
   }
 });
 
-// ========== CHANGE PASSWORD ==========
+// CHANGE PASSWORD
 app.put('/api/auth/change-password', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database is not connected!' });
+    return res.status(503).json({ error: 'Database not connected!' });
   }
   
   const client = await pool.connect();
   try {
     const { oldPassword, newPassword } = req.body;
     
-    // Get current password
     const result = await client.query('SELECT password FROM users WHERE id = $1', [req.userId]);
     const user = result.rows[0];
     
-    // Verify old password
     const valid = await bcrypt.compare(oldPassword, user.password);
     if (!valid) {
       return res.status(400).json({ error: 'Old password is incorrect!' });
     }
     
-    // Update password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, req.userId]);
     
     res.json({ success: true, message: 'Password changed successfully!' });
   } catch (error) {
-    console.error('Change password error:', error);
     res.status(500).json({ error: 'Server error!' });
   } finally {
     client.release();
   }
 });
 
-// ========== ADD ORDER ==========
+// ADD ORDER
 app.post('/api/auth/orders', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database is not connected!' });
+    return res.status(503).json({ error: 'Database not connected!' });
   }
   
   const client = await pool.connect();
@@ -341,18 +311,13 @@ app.post('/api/auth/orders', verifyToken, async (req, res) => {
     
     const result = await client.query(
       `INSERT INTO orders (user_id, items, total_amount, address, payment_method) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [req.userId, JSON.stringify(items), totalAmount, address, paymentDetails?.method || 'cash']
     );
     
     console.log(`📦 New order! User: ${req.userId}, Total: ${totalAmount?.toLocaleString()} so'm`);
     
-    res.json({ 
-      success: true, 
-      message: 'Order placed successfully!',
-      order: result.rows[0] 
-    });
+    res.json({ success: true, message: 'Order placed successfully!', order: result.rows[0] });
   } catch (error) {
     console.error('Add order error:', error);
     res.status(500).json({ error: 'Failed to place order!' });
@@ -361,37 +326,33 @@ app.post('/api/auth/orders', verifyToken, async (req, res) => {
   }
 });
 
-// ========== GET ORDERS ==========
+// GET ORDERS
 app.get('/api/auth/orders', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database is not connected!' });
+    return res.status(503).json({ error: 'Database not connected!' });
   }
   
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT * FROM orders 
-       WHERE user_id = $1 
-       ORDER BY created_at DESC`,
+      'SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC',
       [req.userId]
     );
-    
     res.json(result.rows);
   } catch (error) {
-    console.error('Get orders error:', error);
     res.status(500).json({ error: 'Failed to load orders!' });
   } finally {
     client.release();
   }
 });
 
-// ========== LOGOUT ==========
+// LOGOUT
 app.post('/api/auth/logout', (req, res) => {
   res.json({ success: true, message: 'Logged out successfully!' });
 });
 
-// ========== START SERVER ==========
-app.listen(PORT, '0.0.0.0', () => {
+// START SERVER
+app.listen(PORT, () => {
   console.log(`
   ═══════════════════════════════════════════════════
   ✅ SHOHRUX MARKET BACKEND IS RUNNING!
