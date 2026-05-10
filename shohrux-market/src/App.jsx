@@ -17,7 +17,7 @@ import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
 import WishlistPage from "./pages/WishlistPage";
-import ProfilePage from "./pages/ProfilePage";
+import ProfilePage from "./pages/ProfilePage";  // ✅ IMPORT QILINGAN
 import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
 
@@ -52,13 +52,14 @@ function AppContent() {
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route
-            path="/profile"
+          {/* ✅ PROFIL ROUTE - TUZATILGAN */}
+          <Route 
+            path="/profile" 
             element={
               <PrivateRoute>
                 <ProfilePage />
               </PrivateRoute>
-            }
+            } 
           />
         </Routes>
       </main>
