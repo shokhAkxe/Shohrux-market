@@ -11,12 +11,7 @@ const prisma = new PrismaClient();
 
 // ==================== CORS SOZLAMALARI ====================
 app.use(cors({
-  // BU YERGA FAQAT O'ZINGIZNING LINKLARINGIZNI QO'YING
-  origin: [
-    'http://localhost:5173', 
-    'http://localhost:5174', 
-    'https://marketshox.netlify.app' // LINK OXIRIDA "/" BO'LMASIN
-  ],
+  origin: true, // Hamma domenga ruxsat
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
