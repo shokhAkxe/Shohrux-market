@@ -4,7 +4,8 @@ const API_URL = 'https://market-api.onrender.com/api';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
-  withCredentials: true,  // Bu stay true
+  // withCredentials: true,  ← BUNI O'CHIRING YOKI FALSE QILING
+  withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -16,10 +17,6 @@ axiosInstance.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    }
-    // Muhim: OPTIONS so'rovlarida Authorization header bo'lmasligi kerak
-    if (config.method === 'options') {
-      delete config.headers.Authorization;
     }
     return config;
   },
