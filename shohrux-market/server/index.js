@@ -9,48 +9,48 @@ require('dotenv').config();
 const app = express();
 const prisma = new PrismaClient();
 
-// Netlify havolangizni bu yerga qo'shing
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'https://marketshox.netlify.app' // O'zingizning Netlify linkigizni shu yerga qo'ying
-];
-
-app.use(express.json());
+// ==================== CORS SOZLAMALARI ====================
+// Bu qism frontend (Netlify) dan kelayotgan so'rovlarga ruxsat beradi
 app.use(cors({
-  origin: function (origin, callback) {
-    // Agar origin ro'yxatda bo'lsa yoki origin bo'lmasa (masalan, mobil ilovalar/Postman)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS xatosi: Ushbu saytdan so\'rov yuborish taqiqlangan'));
-    }
-  },
-  credentials: true,
+  origin: true, // Test jarayonida hamma joydan kelgan so'rovga ruxsat berish (Xavfsiz va aniq yo'l)
+  credentials: true, // Cookie va Tokenlar o'tishi uchun shart
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
+app.use(express.json());
 app.use(cookieParser());
 
+// OPTIONS so'rovlari (preflight) uchun alohida javob qaytarish
+app.options('*', cors());
+
 const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_2026';
+
+// Cookie sozlamalari (Netlify va Render orasida ishlashi uchun)
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,      // Faqat HTTPS orqali (Renderda HTTPS bor)
+  sameSite: 'none',  // Cross-site cookie almashish uchun shart
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 kunlik muddat
+};
 
 // ==================== AUTH MIDDLEWARE ====================
 const verifyToken = (req, res, next) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Avtorizatsiyadan o\'ting (Token topilmadi)' });
+  if (!token) return res.status(401).json({ error: 'Avtorizatsiyadan o\'ting' });
   
   try {
     const verified = jwt.verify(token, JWT_SECRET);
     req.user = verified;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Sessiya muddati tugagan yoki xato token' });
+    res.status(401).json({ error: 'Sessiya xatosi' });
   }
 };
 
-// ==================== USER ROUTES ====================
+// ==================== ROUTES ====================
 
+// 1. Profil ma'lumotlarini olish
 app.get('/api/auth/profile', verifyToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -63,67 +63,28 @@ app.get('/api/auth/profile', verifyToken, async (req, res) => {
   }
 });
 
-app.put('/api/auth/profile', verifyToken, async (req, res) => {
-  try {
-    const { full_name, email, phone, address } = req.body;
-    const updated = await prisma.user.update({
-      where: { id: Number(req.user.id) },
-      data: { full_name, email, phone, address }
-    });
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==================== ORDER ROUTES ====================
-
+// 2. Buyurtma berish
 app.post('/api/auth/orders', verifyToken, async (req, res) => {
   try {
     const { items, totalAmount, address } = req.body;
-
-    if (!items || items.length === 0) {
-      return res.status(400).json({ error: "Savat bo'sh bo'lishi mumkin emas" });
-    }
+    if (!items || items.length === 0) return res.status(400).json({ error: "Savat bo'sh" });
 
     const newOrder = await prisma.order.create({
       data: {
         userId: Number(req.user.id),
-        items: items,
+        items,
         totalAmount: parseFloat(totalAmount),
         address: address || "Manzil ko'rsatilmagan",
         status: "pending"
       }
     });
-
-    res.status(201).json({ success: true, message: "Buyurtma qabul qilindi", order: newOrder });
-  } catch (err) {
-    console.error("Order error:", err);
-    res.status(500).json({ error: "Buyurtma berishda xatolik: " + err.message });
-  }
-});
-
-app.get('/api/auth/orders', verifyToken, async (req, res) => {
-  try {
-    const orders = await prisma.order.findMany({
-      where: { userId: Number(req.user.id) },
-      orderBy: { createdAt: 'desc' }
-    });
-    res.json(orders);
+    res.status(201).json({ success: true, order: newOrder });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ==================== AUTH LOGIC ====================
-
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: true, // Render'da HTTPS bo'lgani uchun true bo'lishi kerak
-  sameSite: 'none', // Netlify va Render orasida ishlashi uchun shart
-  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 kun
-};
-
+// 3. Register
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { full_name, email, phone, password } = req.body;
@@ -133,12 +94,13 @@ app.post('/api/auth/register', async (req, res) => {
     });
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('token', token, COOKIE_OPTIONS);
-    res.json({ success: true, user: { id: user.id, full_name: user.full_name, email: user.email } });
+    res.json({ success: true, user: { id: user.id, full_name: user.full_name } });
   } catch (err) {
-    res.status(400).json({ error: "Registratsiyada xatolik: " + err.message });
+    res.status(400).json({ error: "Email yoki telefon band bo'lishi mumkin" });
   }
 });
 
+// 4. Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { emailOrPhone, password } = req.body;
@@ -150,16 +112,22 @@ app.post('/api/auth/login', async (req, res) => {
     }
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('token', token, COOKIE_OPTIONS);
-    res.json({ success: true, user: { id: user.id, full_name: user.full_name, email: user.email } });
+    res.json({ success: true, user: { id: user.id, full_name: user.full_name } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// 5. Logout
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('token', COOKIE_OPTIONS);
   res.json({ success: true });
 });
 
+// Test uchun asosiy yo'nalish
+app.get('/', (req, res) => {
+  res.send('✅ Shohrux Market API ishlamoqda...');
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server ${PORT}-portda yondi` ));
