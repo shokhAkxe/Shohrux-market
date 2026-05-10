@@ -3,6 +3,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -10,35 +11,28 @@ const PORT = process.env.PORT || 5000;
 
 // ========== CORS ==========
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://shohrux-market.vercel.app',
-    'https://shohrux-market-shohrux-s-projects.vercel.app'
-  ],
-  credentials: false,
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.options('*', cors());
 app.use(express.json());
 
-// ========== POSTGRESQL - TUZATILGAN ==========
-let pool;
+// ========== JWT SECRET ==========
+const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_secret_key_2026';
+
+// ========== POSTGRESQL POOL ==========
+let pool = null;
 let dbConnected = false;
 
-const connectDB = async () => {
+// Database ulanish funksiyasi
+async function connectDatabase() {
   try {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false,
-        require: true
-      },
-      connectionTimeoutMillis: 15000,
-      idleTimeoutMillis: 30000,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
     });
-
+    
     // Test connection
     const client = await pool.connect();
     await client.query('SELECT NOW()');
@@ -47,19 +41,18 @@ const connectDB = async () => {
     dbConnected = true;
     
     // Create tables
-    await initTables();
+    await createTables();
     
   } catch (err) {
     console.error('❌ PostgreSQL connection error:', err.message);
     dbConnected = false;
-    
-    // Retry after 10 seconds
-    console.log('🔄 Retrying connection in 10 seconds...');
-    setTimeout(connectDB, 10000);
+    console.log('🔄 Retrying in 10 seconds...');
+    setTimeout(connectDatabase, 10000);
   }
-};
+}
 
-const initTables = async () => {
+// Create tables
+async function createTables() {
   const client = await pool.connect();
   try {
     // Users table
@@ -103,18 +96,16 @@ const initTables = async () => {
       console.log('✅ Test user created: test@mail.com / 123456');
     }
 
-    console.log('🎉 Database initialization complete!');
+    console.log('🎉 Database ready!');
   } catch (err) {
     console.error('❌ Table creation error:', err.message);
   } finally {
     client.release();
   }
-};
+}
 
 // Start database connection
-connectDB();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_secret_key_2026';
+connectDatabase();
 
 // ========== MIDDLEWARE ==========
 const verifyToken = async (req, res, next) => {
@@ -131,20 +122,23 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// ========== HEALTH CHECK ==========
+// ========== HEALTH CHECKS ==========
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    database: dbConnected ? 'connected' : 'disconnected',
-    message: 'Server ishlayapti!'
+    database: dbConnected ? 'connected' : 'disconnected'
   });
+});
+
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working!', time: new Date().toISOString() });
 });
 
 // ========== REGISTER ==========
 app.post('/api/auth/register', async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database ulanmagan. Keyinroq urinib koring!' });
+    return res.status(503).json({ error: 'Database is not connected. Please try again!' });
   }
   
   const client = await pool.connect();
@@ -152,18 +146,20 @@ app.post('/api/auth/register', async (req, res) => {
     const { full_name, email, phone, password } = req.body;
     
     if (!full_name || !email || !phone || !password) {
-      return res.status(400).json({ error: 'Barcha maydonlarni toldiring!' });
+      return res.status(400).json({ error: 'All fields are required!' });
     }
 
+    // Check if user exists
     const existing = await client.query(
       'SELECT * FROM users WHERE email = $1 OR phone = $2',
       [email, phone]
     );
     
     if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Bu email yoki telefon oldin royhatdan otgan!' });
+      return res.status(400).json({ error: 'User with this email or phone already exists!' });
     }
 
+    // Create user
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await client.query(
       `INSERT INTO users (full_name, email, phone, password) 
@@ -177,14 +173,14 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.json({ 
       success: true, 
-      message: 'Royxatdan otish muvaffaqiyatli!',
+      message: 'Registration successful!',
       user, 
       token 
     });
     
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ error: 'Server xatosi. Keyinroq urinib koring!' });
+    res.status(500).json({ error: 'Server error. Please try again!' });
   } finally {
     client.release();
   }
@@ -193,7 +189,7 @@ app.post('/api/auth/register', async (req, res) => {
 // ========== LOGIN ==========
 app.post('/api/auth/login', async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database ulanmagan. Keyinroq urinib koring!' });
+    return res.status(503).json({ error: 'Database is not connected. Please try again!' });
   }
   
   const client = await pool.connect();
@@ -201,9 +197,10 @@ app.post('/api/auth/login', async (req, res) => {
     const { emailOrPhone, password } = req.body;
     
     if (!emailOrPhone || !password) {
-      return res.status(400).json({ error: 'Email/Telefon va parolni kiriting!' });
+      return res.status(400).json({ error: 'Email/Phone and password are required!' });
     }
 
+    // Find user
     const result = await client.query(
       'SELECT * FROM users WHERE email = $1 OR phone = $1',
       [emailOrPhone]
@@ -211,19 +208,21 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = result.rows[0];
     if (!user) {
-      return res.status(400).json({ error: 'Foydalanuvchi topilmadi!' });
+      return res.status(400).json({ error: 'User not found!' });
     }
 
+    // Check password
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      return res.status(400).json({ error: 'Parol notogri!' });
+      return res.status(400).json({ error: 'Invalid password!' });
     }
 
+    // Generate token
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       success: true,
-      message: 'Kirish muvaffaqiyatli!',
+      message: 'Login successful!',
       user: {
         id: user.id,
         full_name: user.full_name,
@@ -236,7 +235,7 @@ app.post('/api/auth/login', async (req, res) => {
     
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Server xatosi!' });
+    res.status(500).json({ error: 'Server error. Please try again!' });
   } finally {
     client.release();
   }
@@ -245,7 +244,7 @@ app.post('/api/auth/login', async (req, res) => {
 // ========== GET CURRENT USER ==========
 app.get('/api/auth/me', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database ulanmagan!' });
+    return res.status(503).json({ error: 'Database is not connected!' });
   }
   
   const client = await pool.connect();
@@ -256,13 +255,13 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     );
     
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Foydalanuvchi topilmadi!' });
+      return res.status(404).json({ error: 'User not found!' });
     }
     
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Get me error:', error);
-    res.status(500).json({ error: 'Server xatosi!' });
+    console.error('Get user error:', error);
+    res.status(500).json({ error: 'Server error!' });
   } finally {
     client.release();
   }
@@ -271,7 +270,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
 // ========== UPDATE PROFILE ==========
 app.put('/api/auth/profile', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database ulanmagan!' });
+    return res.status(503).json({ error: 'Database is not connected!' });
   }
   
   const client = await pool.connect();
@@ -287,11 +286,11 @@ app.put('/api/auth/profile', verifyToken, async (req, res) => {
     
     res.json({ 
       success: true, 
-      message: 'Profil yangilandi!'
+      message: 'Profile updated successfully!'
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ error: 'Yangilashda xatolik!' });
+    res.status(500).json({ error: 'Update failed!' });
   } finally {
     client.release();
   }
@@ -300,28 +299,31 @@ app.put('/api/auth/profile', verifyToken, async (req, res) => {
 // ========== CHANGE PASSWORD ==========
 app.put('/api/auth/change-password', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database ulanmagan!' });
+    return res.status(503).json({ error: 'Database is not connected!' });
   }
   
   const client = await pool.connect();
   try {
     const { oldPassword, newPassword } = req.body;
     
+    // Get current password
     const result = await client.query('SELECT password FROM users WHERE id = $1', [req.userId]);
     const user = result.rows[0];
     
+    // Verify old password
     const valid = await bcrypt.compare(oldPassword, user.password);
     if (!valid) {
-      return res.status(400).json({ error: 'Eski parol notogri!' });
+      return res.status(400).json({ error: 'Old password is incorrect!' });
     }
     
+    // Update password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, req.userId]);
     
-    res.json({ success: true, message: 'Parol muvaffaqiyatli ozgartirildi!' });
+    res.json({ success: true, message: 'Password changed successfully!' });
   } catch (error) {
     console.error('Change password error:', error);
-    res.status(500).json({ error: 'Server xatosi!' });
+    res.status(500).json({ error: 'Server error!' });
   } finally {
     client.release();
   }
@@ -330,7 +332,7 @@ app.put('/api/auth/change-password', verifyToken, async (req, res) => {
 // ========== ADD ORDER ==========
 app.post('/api/auth/orders', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database ulanmagan!' });
+    return res.status(503).json({ error: 'Database is not connected!' });
   }
   
   const client = await pool.connect();
@@ -344,16 +346,16 @@ app.post('/api/auth/orders', verifyToken, async (req, res) => {
       [req.userId, JSON.stringify(items), totalAmount, address, paymentDetails?.method || 'cash']
     );
     
-    console.log(`📦 New order! User: ${req.userId}, Total: ${totalAmount?.toLocaleString()} som`);
+    console.log(`📦 New order! User: ${req.userId}, Total: ${totalAmount?.toLocaleString()} so'm`);
     
     res.json({ 
       success: true, 
-      message: 'Buyurtma qabul qilindi!',
+      message: 'Order placed successfully!',
       order: result.rows[0] 
     });
   } catch (error) {
     console.error('Add order error:', error);
-    res.status(500).json({ error: 'Buyurtma berishda xatolik!' });
+    res.status(500).json({ error: 'Failed to place order!' });
   } finally {
     client.release();
   }
@@ -362,7 +364,7 @@ app.post('/api/auth/orders', verifyToken, async (req, res) => {
 // ========== GET ORDERS ==========
 app.get('/api/auth/orders', verifyToken, async (req, res) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: 'Database ulanmagan!' });
+    return res.status(503).json({ error: 'Database is not connected!' });
   }
   
   const client = await pool.connect();
@@ -377,7 +379,7 @@ app.get('/api/auth/orders', verifyToken, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Get orders error:', error);
-    res.status(500).json({ error: 'Buyurtmalarni yuklashda xatolik!' });
+    res.status(500).json({ error: 'Failed to load orders!' });
   } finally {
     client.release();
   }
@@ -385,17 +387,18 @@ app.get('/api/auth/orders', verifyToken, async (req, res) => {
 
 // ========== LOGOUT ==========
 app.post('/api/auth/logout', (req, res) => {
-  res.json({ success: true, message: 'Tizimdan chiqildi!' });
+  res.json({ success: true, message: 'Logged out successfully!' });
 });
 
 // ========== START SERVER ==========
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
-  ════════════════════════════════════════════
-  ✅ SERVER ISHLAMOQDA!
+  ═══════════════════════════════════════════════════
+  ✅ SHOHRUX MARKET BACKEND IS RUNNING!
   📡 PORT: ${PORT}
   🗄️  DATABASE: PostgreSQL
   🔗 API: http://localhost:${PORT}/api
-  ════════════════════════════════════════════
+  🧪 TEST: http://localhost:${PORT}/api/health
+  ═══════════════════════════════════════════════════
   `);
 });
