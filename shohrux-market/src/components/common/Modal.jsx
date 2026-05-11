@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function Modal({ isOpen, onClose, children, title }) {
-  // Scroll lock
+  // Scroll lock - modal ochilganda sahifa aylanmasligi uchun
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -13,6 +13,8 @@ function Modal({ isOpen, onClose, children, title }) {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
+
+  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
@@ -33,13 +35,19 @@ function Modal({ isOpen, onClose, children, title }) {
           >
             <div className="sticky top-0 bg-white border-b px-5 py-4 flex justify-between items-center">
               <h2 className="text-xl font-bold">{title}</h2>
-              <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg">
+              <button 
+                onClick={onClose} 
+                className="p-1 hover:bg-slate-100 rounded-lg transition"
+                aria-label="Close"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="p-5">{children}</div>
+            <div className="p-5">
+              {children}
+            </div>
           </motion.div>
         </>
       )}
