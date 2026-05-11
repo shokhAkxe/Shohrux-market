@@ -9,24 +9,20 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ========== CORS ==========
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// CORS
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use(express.json());
 
-// ========== JWT SECRET ==========
+// JWT
 const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_secret_key_2026';
 
-// ========== GOOGLE OAUTH2 ==========
+// Google OAuth
 const googleClient = new OAuth2Client({
   clientId: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 });
 
-// ========== POSTGRESQL ==========
+// PostgreSQL
 const pool = new Pool({
   host: 'dpg-d80381hj2pic73euqa8g-a.frankfurt-postgres.render.com',
   port: 5432,
@@ -39,7 +35,7 @@ const pool = new Pool({
 
 let dbConnected = false;
 
-// ========== DATABASE TABLES ==========
+// Init DB
 async function initDatabase() {
   const client = await pool.connect();
   try {
@@ -94,307 +90,151 @@ async function initDatabase() {
     client.release();
   }
 }
-
 initDatabase();
 
-// ========== MIDDLEWARE ==========
+// Middleware
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Token topilmadi. Iltimos, kiring!' });
-  }
+  if (!token) return res.status(401).json({ error: 'Token topilmadi' });
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.userId = decoded.id;
+    req.userId = jwt.verify(token, JWT_SECRET).id;
     next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Token notogri yoki eskirgan!' });
+  } catch {
+    res.status(401).json({ error: 'Token notogri' });
   }
 };
 
-// ========== HEALTH CHECK ==========
+// Health
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), database: dbConnected ? 'connected' : 'disconnected' });
 });
 
-// ========== REGISTER ==========
+// Register
 app.post('/api/auth/register', async (req, res) => {
-  if (!dbConnected) return res.status(503).json({ error: 'Database ulanmagan!' });
-  
   const client = await pool.connect();
   try {
     const { full_name, email, phone, password } = req.body;
-    if (!full_name || !email || !phone || !password) {
-      return res.status(400).json({ error: 'Barcha maydonlarni toldiring!' });
-    }
+    if (!full_name || !email || !phone || !password) return res.status(400).json({ error: 'Barcha maydonlarni toldiring' });
 
     const existing = await client.query('SELECT * FROM users WHERE email = $1 OR phone = $2', [email, phone]);
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Bu email yoki telefon oldin royhatdan otgan!' });
-    }
+    if (existing.rows.length > 0) return res.status(400).json({ error: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await client.query(
       `INSERT INTO users (full_name, email, phone, password, address) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, phone, address`,
       [full_name, email, phone, hashedPassword, '']
     );
-
     const user = result.rows[0];
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-
-    res.json({ success: true, message: 'Royxatdan otish muvaffaqiyatli!', user, token });
-  } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ error: 'Server xatosi!' });
-  } finally {
-    client.release();
-  }
+    res.json({ success: true, user, token });
+  } finally { client.release(); }
 });
 
-// ========== LOGIN ==========
+// Login
 app.post('/api/auth/login', async (req, res) => {
-  if (!dbConnected) return res.status(503).json({ error: 'Database ulanmagan!' });
-  
   const client = await pool.connect();
   try {
     const { emailOrPhone, password } = req.body;
-    if (!emailOrPhone || !password) {
-      return res.status(400).json({ error: 'Email/Telefon va parolni kiriting!' });
-    }
-
     const result = await client.query('SELECT * FROM users WHERE email = $1 OR phone = $1', [emailOrPhone]);
     const user = result.rows[0];
-    if (!user) return res.status(400).json({ error: 'Foydalanuvchi topilmadi!' });
-
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(400).json({ error: 'Parol notogri!' });
-
+    if (!user) return res.status(400).json({ error: 'User not found' });
+    if (!await bcrypt.compare(password, user.password)) return res.status(400).json({ error: 'Wrong password' });
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-
-    res.json({
-      success: true,
-      message: 'Kirish muvaffaqiyatli!',
-      user: { id: user.id, full_name: user.full_name, email: user.email, phone: user.phone, address: user.address || '' },
-      token
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Server xatosi!' });
-  } finally {
-    client.release();
-  }
+    res.json({ success: true, user: { id: user.id, full_name: user.full_name, email: user.email, phone: user.phone, address: user.address }, token });
+  } finally { client.release(); }
 });
 
-// ========== GOOGLE LOGIN ==========
+// GOOGLE LOGIN - MUHIM QISM!
 app.post('/api/auth/google', async (req, res) => {
-  let client;
   try {
     const { credential } = req.body;
-    
-    console.log('📥 Google login request received');
-    
-    if (!credential) {
-      console.log('❌ No credential provided');
-      return res.status(400).json({ error: 'Google token topilmadi!' });
-    }
-    
-    console.log('🔐 Verifying Google token...');
-    
+    if (!credential) return res.status(400).json({ error: 'Google token topilmadi' });
+
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID
     });
-    
-    const payload = ticket.getPayload();
-    const { email, name, picture, sub: googleId } = payload;
-    
-    console.log('✅ Google token verified:', { email, name });
-    
-    client = await pool.connect();
-    
-    // Check if user exists
+    const { email, name, picture, sub: googleId } = ticket.getPayload();
+
+    const client = await pool.connect();
     let result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
     let user = result.rows[0];
-    
+
     if (!user) {
-      // Create new user
       const randomPassword = await bcrypt.hash(googleId + Date.now(), 10);
-      const insertResult = await client.query(
+      result = await client.query(
         `INSERT INTO users (full_name, email, phone, password, address, google_id, picture) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7) 
-         RETURNING id, full_name, email, phone, address, picture`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, full_name, email, phone, address, picture`,
         [name || email.split('@')[0], email, '', randomPassword, '', googleId, picture || '']
       );
-      user = insertResult.rows[0];
-      console.log('✅ New Google user created:', email);
+      user = result.rows[0];
     } else if (!user.google_id) {
-      // Add google_id to existing user
       await client.query('UPDATE users SET google_id = $1, picture = $2 WHERE id = $3', [googleId, picture || '', user.id]);
       user.google_id = googleId;
       user.picture = picture;
-      console.log('✅ Google ID added to existing user:', email);
     }
-    
+    client.release();
+
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    
-    console.log('✅ Google login successful for:', email);
-    
-    res.json({
-      success: true,
-      message: 'Google orqali kirish muvaffaqiyatli!',
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email,
-        phone: user.phone || '',
-        address: user.address || '',
-        picture: user.picture || null
-      },
-      token
-    });
-    
-  } catch (error) {
-    console.error('❌ Google login error:', error.message);
-    
-    if (error.message.includes('Invalid token')) {
-      res.status(401).json({ error: 'Google token notogri!' });
-    } else if (error.message.includes('audience')) {
-      res.status(401).json({ error: 'Google Client ID mos kelmadi!' });
-    } else {
-      res.status(500).json({ error: 'Google orqali kirishda xatolik: ' + error.message });
-    }
-  } finally {
-    if (client) client.release();
+    res.json({ success: true, user: { id: user.id, full_name: user.full_name, email: user.email, phone: user.phone, address: user.address, picture: user.picture }, token });
+  } catch (err) {
+    console.error('Google login error:', err.message);
+    res.status(500).json({ error: 'Google orqali kirishda xatolik: ' + err.message });
   }
 });
 
-// ========== GET PROFILE ==========
+// Profile
 app.get('/api/auth/me', verifyToken, async (req, res) => {
   const client = await pool.connect();
   try {
-    const result = await client.query('SELECT id, full_name, email, phone, address, picture, created_at FROM users WHERE id = $1', [req.userId]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Foydalanuvchi topilmadi!' });
+    const result = await client.query('SELECT id, full_name, email, phone, address, picture FROM users WHERE id = $1', [req.userId]);
     res.json(result.rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: 'Server xatosi!' });
-  } finally {
-    client.release();
-  }
+  } finally { client.release(); }
 });
 
-// ========== UPDATE PROFILE ==========
 app.put('/api/auth/profile', verifyToken, async (req, res) => {
   const client = await pool.connect();
   try {
     const { full_name, email, phone, address } = req.body;
-    
-    const current = await client.query('SELECT * FROM users WHERE id = $1', [req.userId]);
-    if (current.rows.length === 0) return res.status(404).json({ error: 'Foydalanuvchi topilmadi!' });
-    
-    const cur = current.rows[0];
-    
-    if (email && email !== cur.email) {
-      const exists = await client.query('SELECT * FROM users WHERE email = $1 AND id != $2', [email, req.userId]);
-      if (exists.rows.length > 0) return res.status(400).json({ error: 'Bu email boshqa foydalanuvchida mavjud!' });
-    }
-    
-    if (phone && phone !== cur.phone) {
-      const exists = await client.query('SELECT * FROM users WHERE phone = $1 AND id != $2', [phone, req.userId]);
-      if (exists.rows.length > 0) return res.status(400).json({ error: 'Bu telefon boshqa foydalanuvchida mavjud!' });
-    }
-    
-    const newFullName = full_name || cur.full_name;
-    const newEmail = email || cur.email;
-    const newPhone = phone || cur.phone;
-    const newAddress = address !== undefined ? address : cur.address;
-    
     await client.query('UPDATE users SET full_name = $1, email = $2, phone = $3, address = $4 WHERE id = $5',
-      [newFullName, newEmail, newPhone, newAddress, req.userId]);
-    
-    const updated = await client.query('SELECT id, full_name, email, phone, address, picture, created_at FROM users WHERE id = $1', [req.userId]);
-    res.json({ success: true, message: 'Profil yangilandi!', user: updated.rows[0] });
-  } catch (error) {
-    console.error('Update error:', error);
-    res.status(500).json({ error: 'Yangilashda xatolik!' });
-  } finally {
-    client.release();
-  }
+      [full_name, email, phone, address, req.userId]);
+    res.json({ success: true });
+  } finally { client.release(); }
 });
 
-// ========== CHANGE PASSWORD ==========
 app.put('/api/auth/change-password', verifyToken, async (req, res) => {
   const client = await pool.connect();
   try {
     const { oldPassword, newPassword } = req.body;
-    if (!oldPassword || !newPassword) return res.status(400).json({ error: 'Eski va yangi parolni kiriting!' });
-    
     const result = await client.query('SELECT password FROM users WHERE id = $1', [req.userId]);
-    const valid = await bcrypt.compare(oldPassword, result.rows[0].password);
-    if (!valid) return res.status(400).json({ error: 'Eski parol notogri!' });
-    
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, req.userId]);
-    res.json({ success: true, message: 'Parol ozgartirildi!' });
-  } catch (error) {
-    res.status(500).json({ error: 'Server xatosi!' });
-  } finally {
-    client.release();
-  }
+    if (!await bcrypt.compare(oldPassword, result.rows[0].password)) return res.status(400).json({ error: 'Old password incorrect' });
+    await client.query('UPDATE users SET password = $1 WHERE id = $2', [await bcrypt.hash(newPassword, 10), req.userId]);
+    res.json({ success: true });
+  } finally { client.release(); }
 });
 
-// ========== ADD ORDER ==========
 app.post('/api/auth/orders', verifyToken, async (req, res) => {
   const client = await pool.connect();
   try {
     const { items, totalAmount, address, paymentMethod } = req.body;
-    if (!items || !totalAmount) return res.status(400).json({ error: 'Buyurtma malumotlari toldirilmagan!' });
-    
     const result = await client.query(
-      `INSERT INTO orders (user_id, items, total_amount, address, payment_method, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [req.userId, JSON.stringify(items), totalAmount, address || '', paymentMethod || 'cash', 'pending']
+      `INSERT INTO orders (user_id, items, total_amount, address, payment_method) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.userId, JSON.stringify(items), totalAmount, address, paymentMethod || 'cash']
     );
-    console.log(`📦 New order! User: ${req.userId}, Total: ${totalAmount?.toLocaleString()} so'm`);
-    res.json({ success: true, message: 'Buyurtma qabul qilindi!', order: result.rows[0] });
-  } catch (error) {
-    console.error('Order error:', error);
-    res.status(500).json({ error: 'Buyurtma berishda xatolik!' });
-  } finally {
-    client.release();
-  }
+    res.json({ success: true, order: result.rows[0] });
+  } finally { client.release(); }
 });
 
-// ========== GET ORDERS ==========
 app.get('/api/auth/orders', verifyToken, async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query('SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC', [req.userId]);
     res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: 'Buyurtmalarni yuklashda xatolik!' });
-  } finally {
-    client.release();
-  }
+  } finally { client.release(); }
 });
 
-// ========== LOGOUT ==========
-app.post('/api/auth/logout', (req, res) => {
-  res.json({ success: true, message: 'Tizimdan chiqildi!' });
-});
+app.post('/api/auth/logout', (req, res) => res.json({ success: true }));
 
-// ========== 404 HANDLER (ENG OXIRIDA) ==========
-app.use('*', (req, res) => {
-  res.status(404).json({ error: `Route ${req.originalUrl} not found` });
-});
+app.use('*', (req, res) => res.status(404).json({ error: `Route ${req.originalUrl} not found` }));
 
-// ========== START SERVER ==========
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`
-  ═══════════════════════════════════════════════════
-  ✅ SHOHRUX MARKET BACKEND ISHLAMOQDA!
-  📡 PORT: ${PORT}
-  🗄️  DATABASE: PostgreSQL
-  🔗 API: http://localhost:${PORT}/api
-  🧪 TEST: http://localhost:${PORT}/api/health
-  ═══════════════════════════════════════════════════
-  `);
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`✅ Backend running on port ${PORT}`));
