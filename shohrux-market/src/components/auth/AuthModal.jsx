@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, User, Chrome, Eye, EyeOff } from "lucide-react";
+import { X, User, Eye, EyeOff } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
@@ -26,23 +26,32 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
   
   const [loading, setLoading] = useState(false);
 
-  // Google login
+  // ========== GOOGLE LOGIN (TO'G'RILANGAN) ==========
   const googleLoginHandler = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      console.log("Google token:", tokenResponse);
+      console.log("Google access token:", tokenResponse);
       setLoading(true);
-      const result = await googleLogin(tokenResponse.access_token);
-      setLoading(false);
-      if (result.success) {
-        onCloseLogin();
-        onCloseRegister();
+      try {
+        // access_token ni yuborish
+        const result = await googleLogin(tokenResponse.access_token);
+        if (result.success) {
+          onCloseLogin();
+          onCloseRegister();
+          toast.success("Google orqali kirish muvaffaqiyatli!");
+        }
+      } catch (err) {
+        console.error("Google login error:", err);
+        toast.error("Google orqali kirishda xatolik");
+      } finally {
+        setLoading(false);
       }
     },
     onError: (error) => {
       console.error("Google login error:", error);
-      toast.error('Google login failed');
+      toast.error("Google login failed");
       setLoading(false);
-    }
+    },
+    flow: 'implicit',
   });
 
   const handleLogin = async (e) => {
@@ -208,6 +217,7 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
                   {loading ? "Kutilmoqda..." : t("login")}
                 </button>
                 
+                {/* GOOGLE LOGIN BUTTON */}
                 <button
                   type="button"
                   onClick={() => googleLoginHandler()}
