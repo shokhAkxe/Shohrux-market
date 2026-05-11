@@ -39,9 +39,8 @@ async function initDatabase() {
   const client = await pool.connect();
   try {
     await client.query('SELECT NOW()');
-    console.log('✅ PostgreSQL ulandi!');
+    console.log('✅ PostgreSQL connected');
     dbConnected = true;
-
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -55,8 +54,6 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('✅ Users table ready');
-
     await client.query(`
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
@@ -69,19 +66,16 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('✅ Orders table ready');
-
     const testUser = await client.query('SELECT * FROM users WHERE email = $1', ['test@mail.com']);
     if (testUser.rows.length === 0) {
       const hashedPassword = await bcrypt.hash('123456', 10);
       await client.query(
         `INSERT INTO users (full_name, email, phone, password, address) VALUES ($1, $2, $3, $4, $5)`,
-        ['Test User', 'test@mail.com', '+998991234567', hashedPassword, 'Test manzil']
+        ['Test User', 'test@mail.com', '+998991234567', hashedPassword, 'Test address']
       );
       console.log('✅ Test user: test@mail.com / 123456');
     }
-
-    console.log('🎉 DATABASE READY!');
+    console.log('✅ Database ready');
   } catch (err) {
     console.error('DB init error:', err.message);
     dbConnected = false;
@@ -91,15 +85,14 @@ async function initDatabase() {
 }
 initDatabase();
 
-// Middleware
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Token topilmadi' });
+  if (!token) return res.status(401).json({ error: 'No token' });
   try {
     req.userId = jwt.verify(token, JWT_SECRET).id;
     next();
   } catch {
-    res.status(401).json({ error: 'Token notogri' });
+    res.status(401).json({ error: 'Invalid token' });
   }
 };
 
@@ -112,11 +105,9 @@ app.post('/api/auth/register', async (req, res) => {
   const client = await pool.connect();
   try {
     const { full_name, email, phone, password } = req.body;
-    if (!full_name || !email || !phone || !password) return res.status(400).json({ error: 'Barcha maydonlarni toldiring' });
-
+    if (!full_name || !email || !phone || !password) return res.status(400).json({ error: 'All fields required' });
     const existing = await client.query('SELECT * FROM users WHERE email = $1 OR phone = $2', [email, phone]);
     if (existing.rows.length > 0) return res.status(400).json({ error: 'User already exists' });
-
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await client.query(
       `INSERT INTO users (full_name, email, phone, password, address) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, phone, address`,
@@ -141,11 +132,11 @@ app.post('/api/auth/login', async (req, res) => {
   } finally { client.release(); }
 });
 
-// ========== GOOGLE LOGIN ROUTE ==========
+// ========== GOOGLE LOGIN - ASOSIY QISM ==========
 app.post('/api/auth/google', async (req, res) => {
   try {
     const { credential } = req.body;
-    if (!credential) return res.status(400).json({ error: 'Google token topilmadi' });
+    if (!credential) return res.status(400).json({ error: 'Google token not found' });
 
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
@@ -167,16 +158,14 @@ app.post('/api/auth/google', async (req, res) => {
       user = result.rows[0];
     } else if (!user.google_id) {
       await client.query('UPDATE users SET google_id = $1, picture = $2 WHERE id = $3', [googleId, picture || '', user.id]);
-      user.google_id = googleId;
-      user.picture = picture;
     }
     client.release();
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ success: true, user: { id: user.id, full_name: user.full_name, email: user.email, phone: user.phone, address: user.address, picture: user.picture }, token });
+    res.json({ success: true, user: { id: user.id, full_name: user.full_name, email: user.email, phone: user.phone || '', address: user.address || '', picture: user.picture || null }, token });
   } catch (err) {
     console.error('Google login error:', err.message);
-    res.status(500).json({ error: 'Google orqali kirishda xatolik: ' + err.message });
+    res.status(500).json({ error: 'Google login failed: ' + err.message });
   }
 });
 
@@ -233,4 +222,4 @@ app.post('/api/auth/logout', (req, res) => res.json({ success: true }));
 
 app.use('*', (req, res) => res.status(404).json({ error: `Route ${req.originalUrl} not found` }));
 
-app.listen(PORT, '0.0.0.0', () => console.log(`✅ Backend running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`✅ Server running on port ${PORT}`));
