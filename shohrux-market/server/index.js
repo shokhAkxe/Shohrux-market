@@ -44,7 +44,7 @@ async function initDatabase() {
   const client = await pool.connect();
   try {
     await client.query('SELECT NOW()');
-    console.log('✅ PostgreSQL connected');
+    console.log('✅ PostgreSQL ulandi!');
     dbConnected = true;
 
     await client.query(`
@@ -180,19 +180,20 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// ========== GOOGLE LOGIN (ROUTE) - MUHIM! ==========
+// ========== GOOGLE LOGIN ==========
 app.post('/api/auth/google', async (req, res) => {
   try {
-    const { credential } = req.body;
+    const { accessToken } = req.body;
     
     console.log('📥 Google login request received');
     
-    if (!credential) {
+    if (!accessToken) {
       return res.status(400).json({ error: 'Google token topilmadi!' });
     }
     
+    // Access token orqali user ma'lumotlarini olish
     const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
+      idToken: accessToken,
       audience: process.env.GOOGLE_CLIENT_ID
     });
     
@@ -362,7 +363,7 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ success: true, message: 'Tizimdan chiqildi!' });
 });
 
-// ========== 404 HANDLER (ENG OXIRIDA) ==========
+// ========== 404 HANDLER ==========
 app.use('*', (req, res) => {
   res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Eye, EyeOff } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -9,6 +9,18 @@ import toast from "react-hot-toast";
 function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister, onSwitchToRegister, onSwitchToLogin }) {
   const { t } = useTranslation();
   const { register, login, googleLogin } = useAuth();
+
+  // Scroll lock - modal ochilganda sahifa aylanmasligi uchun
+  useEffect(() => {
+    if (isLoginOpen || isRegisterOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isLoginOpen, isRegisterOpen]);
 
   // Login state
   const [loginEmail, setLoginEmail] = useState("");
@@ -29,7 +41,7 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
   // ========== GOOGLE LOGIN (TO'G'RILANGAN) ==========
   const googleLoginHandler = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      console.log("Google access token:", tokenResponse);
+      console.log("Google response:", tokenResponse);
       setLoading(true);
       try {
         // access_token ni yuborish
@@ -37,7 +49,6 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
         if (result.success) {
           onCloseLogin();
           onCloseRegister();
-          toast.success("Google orqali kirish muvaffaqiyatli!");
         }
       } catch (err) {
         console.error("Google login error:", err);
@@ -51,7 +62,6 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
       toast.error("Google login failed");
       setLoading(false);
     },
-    flow: 'implicit',
   });
 
   const handleLogin = async (e) => {
@@ -114,7 +124,9 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
     width: "100%",
     maxWidth: "400px",
     borderRadius: "16px",
-    overflow: "hidden"
+    overflow: "hidden",
+    maxHeight: "90vh",
+    overflowY: "auto"
   };
 
   const inputStyle = {
@@ -217,7 +229,6 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
                   {loading ? "Kutilmoqda..." : t("login")}
                 </button>
                 
-                {/* GOOGLE LOGIN BUTTON */}
                 <button
                   type="button"
                   onClick={() => googleLoginHandler()}
@@ -262,7 +273,7 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              style={{ ...modalStyle, maxHeight: "90vh", overflowY: "auto" }}
+              style={modalStyle}
             >
               <div style={{ background: "#059669", padding: "20px", textAlign: "center", position: "relative" }}>
                 <button
