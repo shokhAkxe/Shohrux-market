@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
     
     try {
       const response = await authAPI.getMe();
+      console.log('✅ User loaded:', response.data);
       setUser(response.data);
       setIsAuthenticated(true);
     } catch (err) {
@@ -50,7 +51,7 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       setIsAuthenticated(true);
       toast.success('Xush kelibsiz!');
-      return { success: true };
+      return { success: true, user };
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Kirishda xatolik';
       toast.error(errorMsg);
@@ -67,7 +68,7 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       setIsAuthenticated(true);
       toast.success("Ro'yxatdan o'tish muvaffaqiyatli!");
-      return { success: true };
+      return { success: true, user };
     } catch (err) {
       const errorMsg = err.response?.data?.error || "Xatolik yuz berdi";
       toast.error(errorMsg);
@@ -75,32 +76,41 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Google Login
+  // Google Login (hozircha mock, keyin to'liq qo'shamiz)
   const googleLogin = async (googleData) => {
     try {
-      const response = await authAPI.googleLogin(googleData);
-      const { user, token } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      setIsAuthenticated(true);
-      toast.success('Xush kelibsiz!');
-      return { success: true };
+      // TODO: Google OAuth2 integratsiyasi
+      toast.info('Google orqali kirish hozircha ishlab chiqilmoqda');
+      return { success: false };
     } catch (err) {
       toast.error('Google login failed');
       return { success: false };
     }
   };
 
-  // Profilni yangilash
+  // Profilni yangilash (TO'G'RILANGAN)
   const updateProfile = async (data) => {
     try {
       const response = await authAPI.updateProfile(data);
-      setUser(response.data);
-      toast.success('Profil yangilandi!');
-      return { success: true };
+      console.log('✅ Profile updated:', response.data);
+      
+      // Yangilangan ma'lumotlarni user state ga saqlash
+      if (response.data.user) {
+        setUser(prev => ({ ...prev, ...response.data.user }));
+      } else if (response.data) {
+        setUser(prev => ({ ...prev, ...response.data }));
+      }
+      
+      // Qayta yuklash
+      await loadUser();
+      
+      toast.success('Profil muvaffaqiyatli yangilandi!');
+      return { success: true, user: response.data };
     } catch (err) {
-      toast.error('Yangilashda xatolik');
-      return { success: false };
+      console.error('Update profile error:', err);
+      const errorMsg = err.response?.data?.error || 'Yangilashda xatolik yuz berdi';
+      toast.error(errorMsg);
+      return { success: false, error: errorMsg };
     }
   };
 
@@ -108,23 +118,27 @@ export const AuthProvider = ({ children }) => {
   const changePassword = async (oldPassword, newPassword) => {
     try {
       await authAPI.changePassword({ oldPassword, newPassword });
-      toast.success('Parol o\'zgartirildi!');
+      toast.success('Parol muvaffaqiyatli o\'zgartirildi!');
       return { success: true };
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Parol o\'zgartirishda xatolik');
-      return { success: false };
+      console.error('Change password error:', err);
+      const errorMsg = err.response?.data?.error || 'Parol o\'zgartirishda xatolik';
+      toast.error(errorMsg);
+      return { success: false, error: errorMsg };
     }
   };
 
   // Buyurtma berish
   const addOrder = async (orderData) => {
     try {
-      await authAPI.addOrder(orderData);
-      toast.success('Buyurtmangiz qabul qilindi!');
-      return { success: true };
+      const response = await authAPI.addOrder(orderData);
+      toast.success('Buyurtmangiz muvaffaqiyatli qabul qilindi!');
+      return { success: true, order: response.data };
     } catch (err) {
-      toast.error('Buyurtma berishda xatolik');
-      return { success: false };
+      console.error('Add order error:', err);
+      const errorMsg = err.response?.data?.error || 'Buyurtma berishda xatolik';
+      toast.error(errorMsg);
+      return { success: false, error: errorMsg };
     }
   };
 
@@ -132,7 +146,7 @@ export const AuthProvider = ({ children }) => {
   const getOrders = async () => {
     try {
       const response = await authAPI.getOrders();
-      return { success: true, orders: response.data };
+      return { success: true, orders: response.data || [] };
     } catch (err) {
       console.error('Get orders error:', err);
       return { success: false, orders: [] };
@@ -158,6 +172,7 @@ export const AuthProvider = ({ children }) => {
       user,
       isAuthenticated,
       loading,
+      loadUser,  // ✅ QO'SHILDI
       login,
       register,
       googleLogin,

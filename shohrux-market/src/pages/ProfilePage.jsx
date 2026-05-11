@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { User, Mail, Phone, MapPin, Package, LogOut, Edit2, Save, ShoppingBag, Calendar, DollarSign } from "lucide-react";
+import { User, Package, LogOut, Edit2, Save, ShoppingBag, Calendar } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { authAPI } from "../api/auth";
 import toast from "react-hot-toast";
@@ -9,20 +9,32 @@ import toast from "react-hot-toast";
 function ProfilePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user, updateProfile, changePassword, logout } = useAuth();
+  const { user, updateProfile, changePassword, logout, loadUser } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-    full_name: user?.full_name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-    address: user?.address || "",
+    full_name: "",
+    email: "",
+    phone: "",
+    address: "",
   });
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // User ma'lumotlari o'zgarganda editData ni yangilash
+  useEffect(() => {
+    if (user) {
+      setEditData({
+        full_name: user.full_name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        address: user.address || "",
+      });
+    }
+  }, [user]);
 
   // Buyurtmalarni yuklash
   useEffect(() => {
@@ -44,9 +56,25 @@ function ProfilePage() {
   };
 
   const handleSave = async () => {
-    const res = await updateProfile(editData);
+    // Faqat o'zgartirilgan maydonlarni yuborish
+    const dataToUpdate = {};
+    if (editData.full_name !== user?.full_name) dataToUpdate.full_name = editData.full_name;
+    if (editData.email !== user?.email) dataToUpdate.email = editData.email;
+    if (editData.phone !== user?.phone) dataToUpdate.phone = editData.phone;
+    if (editData.address !== user?.address) dataToUpdate.address = editData.address;
+    
+    if (Object.keys(dataToUpdate).length === 0) {
+      toast.error("Hech qanday o'zgarish yo'q!");
+      setIsEditing(false);
+      return;
+    }
+    
+    const res = await updateProfile(dataToUpdate);
     if (res.success) {
       setIsEditing(false);
+      // Profilni qayta yuklash
+      await loadUser();
+      toast.success("Profil muvaffaqiyatli yangilandi!");
     }
   };
 
@@ -55,28 +83,40 @@ function ProfilePage() {
       toast.error(t("fill_all_fields"));
       return;
     }
+    if (newPass.length < 4) {
+      toast.error("Yangi parol kamida 4 belgidan iborat bo'lishi kerak!");
+      return;
+    }
     const res = await changePassword(oldPass, newPass);
     if (res.success) {
       setOldPass("");
       setNewPass("");
       setShowPasswordForm(false);
+      toast.success("Parol muvaffaqiyatli o'zgartirildi!");
     }
   };
 
-  // Xavfsiz formatlash funksiyasi
   const formatPrice = (price) => {
     if (!price && price !== 0) return "0";
     return Number(price).toLocaleString();
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "Noma'lum sana";
+    try {
+      return new Date(dateStr).toLocaleDateString('uz-UZ');
+    } catch {
+      return "Noma'lum sana";
+    }
+  };
+
+  // Agar user bo'lmasa
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 pt-20 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-500 mb-4">Iltimos, avval kiring</p>
-          <button onClick={() => navigate("/")} className="px-6 py-2 bg-blue-600 text-white rounded-xl">
-            Bosh sahifa
-          </button>
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-500">Ma'lumotlar yuklanmoqda...</p>
         </div>
       </div>
     );
@@ -94,8 +134,8 @@ function ProfilePage() {
                   <User size={32} className="text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">{user?.full_name}</h1>
-                  <p className="opacity-80">{user?.email}</p>
+                  <h1 className="text-2xl font-bold">{user?.full_name || "Foydalanuvchi"}</h1>
+                  <p className="opacity-80">{user?.email || "Email mavjud emas"}</p>
                 </div>
               </div>
               {!isEditing ? (
@@ -103,14 +143,14 @@ function ProfilePage() {
                   onClick={() => setIsEditing(true)}
                   className="px-4 py-2 bg-white/20 rounded-xl hover:bg-white/30 transition flex items-center gap-2"
                 >
-                  <Edit2 size={16} /> {t("edit_profile")}
+                  <Edit2 size={16} /> Tahrirlash
                 </button>
               ) : (
                 <button
                   onClick={handleSave}
                   className="px-4 py-2 bg-green-500 rounded-xl hover:bg-green-600 transition flex items-center gap-2"
                 >
-                  <Save size={16} /> {t("save_changes")}
+                  <Save size={16} /> Saqlash
                 </button>
               )}
             </div>
@@ -121,64 +161,70 @@ function ProfilePage() {
             {/* Personal Info */}
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <User size={18} /> {t("personal_info")}
+                <User size={18} /> Shaxsiy ma'lumotlar
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-500">{t("full_name")}</label>
+                  <label className="text-sm text-slate-500">Ism Familiya</label>
                   {isEditing ? (
                     <input
                       value={editData.full_name}
                       onChange={(e) => setEditData({ ...editData, full_name: e.target.value })}
                       className="w-full p-2 border rounded-lg mt-1 focus:outline-none focus:border-blue-500"
+                      placeholder="Ism familiyangiz"
                     />
                   ) : (
-                    <p className="font-medium mt-1">{user?.full_name || "-"}</p>
+                    <p className="font-medium mt-1">{user?.full_name || "Ma'lumot yo'q"}</p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-slate-500">{t("email")}</label>
+                  <label className="text-sm text-slate-500">Email</label>
                   {isEditing ? (
                     <input
+                      type="email"
                       value={editData.email}
                       onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                       className="w-full p-2 border rounded-lg mt-1 focus:outline-none focus:border-blue-500"
+                      placeholder="Email manzilingiz"
                     />
                   ) : (
-                    <p className="font-medium mt-1">{user?.email || "-"}</p>
+                    <p className="font-medium mt-1">{user?.email || "Ma'lumot yo'q"}</p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-slate-500">{t("phone")}</label>
+                  <label className="text-sm text-slate-500">Telefon</label>
                   {isEditing ? (
                     <input
+                      type="tel"
                       value={editData.phone}
                       onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
                       className="w-full p-2 border rounded-lg mt-1 focus:outline-none focus:border-blue-500"
+                      placeholder="Telefon raqamingiz"
                     />
                   ) : (
-                    <p className="font-medium mt-1">{user?.phone || "-"}</p>
+                    <p className="font-medium mt-1">{user?.phone || "Ma'lumot yo'q"}</p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-slate-500">{t("address")}</label>
+                  <label className="text-sm text-slate-500">Manzil</label>
                   {isEditing ? (
                     <input
-                      value={editData.address || ""}
+                      value={editData.address}
                       onChange={(e) => setEditData({ ...editData, address: e.target.value })}
                       className="w-full p-2 border rounded-lg mt-1 focus:outline-none focus:border-blue-500"
+                      placeholder="Manzilingiz"
                     />
                   ) : (
-                    <p className="font-medium mt-1">{user?.address || "-"}</p>
+                    <p className="font-medium mt-1">{user?.address || "Ma'lumot yo'q"}</p>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Order History - TUZATILGAN */}
+            {/* Order History */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Package size={18} /> {t("order_history")}
+                <Package size={18} /> Buyurtmalar tarixi
               </h3>
               
               {loading ? (
@@ -189,10 +235,7 @@ function ProfilePage() {
               ) : orders.length > 0 ? (
                 <div className="space-y-4">
                   {orders.map((order, idx) => {
-                    // Xavfsiz ma'lumot olish
-                    const orderId = order?.id || order?._id || idx;
-                    const orderStatus = order?.status || 'pending';
-                    const orderDate = order?.created_at || order?.createdAt || order?.date;
+                    const orderId = order?.id || idx;
                     const totalAmount = order?.total_amount || order?.totalAmount || order?.total || 0;
                     
                     return (
@@ -206,9 +249,7 @@ function ProfilePage() {
                           </div>
                           <div className="flex items-center gap-2 text-sm text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm">
                             <Calendar size={14} />
-                            <span>
-                              {orderDate ? new Date(orderDate).toLocaleDateString('uz-UZ') : 'Noma\'lum sana'}
-                            </span>
+                            <span>{formatDate(order?.created_at || order?.createdAt || order?.date)}</span>
                           </div>
                         </div>
                         
@@ -218,7 +259,6 @@ function ProfilePage() {
                               const itemName = item?.nomi?.[i18n.language] || item?.nomi?.uz || item?.nomi || 'Mahsulot';
                               const itemPrice = item?.narxi || 0;
                               const itemQty = item?.quantity || 1;
-                              const itemTotal = itemPrice * itemQty;
                               
                               return (
                                 <div key={itemIdx} className="flex justify-between text-sm items-center">
@@ -227,25 +267,21 @@ function ProfilePage() {
                                     <span className="text-slate-400 ml-1">x{itemQty}</span>
                                   </span>
                                   <span className="font-semibold text-slate-800">
-                                    {formatPrice(itemTotal)} so'm
+                                    {formatPrice(itemPrice * itemQty)} so'm
                                   </span>
                                 </div>
                               );
                             })
                           ) : (
-                            <div className="text-center text-slate-400 text-sm">Mahsulot ma'lumotlari mavjud emas</div>
+                            <div className="text-center text-slate-400 text-sm py-2">
+                              Mahsulot ma'lumotlari mavjud emas
+                            </div>
                           )}
                         </div>
                         
                         <div className="flex justify-between items-center pt-2">
-                          <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                            orderStatus === 'pending' ? 'bg-amber-100 text-amber-700' : 
-                            orderStatus === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                            'bg-slate-100 text-slate-700'
-                          }`}>
-                            {orderStatus === 'pending' ? 'Kutilmoqda' : 
-                             orderStatus === 'completed' ? 'Yetkazilgan' : 
-                             orderStatus}
+                          <span className="text-xs px-3 py-1 rounded-full font-medium bg-amber-100 text-amber-700">
+                            {order?.status === 'pending' ? 'Kutilmoqda' : 'Yetkazilgan'}
                           </span>
                           <div className="text-right">
                             <p className="text-xs text-slate-400 uppercase tracking-wider">Jami</p>
@@ -264,7 +300,7 @@ function ProfilePage() {
                   <p className="text-slate-400 font-medium">Hali buyurtmalar yo'q</p>
                   <button 
                     onClick={() => navigate("/")} 
-                    className="mt-4 text-blue-600 text-sm font-semibold hover:text-blue-700 underline-offset-4 hover:underline"
+                    className="mt-4 text-blue-600 text-sm font-semibold hover:text-blue-700 transition"
                   >
                     Xaridni boshlash
                   </button>
@@ -279,21 +315,21 @@ function ProfilePage() {
                   onClick={() => setShowPasswordForm(true)}
                   className="text-blue-600 hover:underline font-medium"
                 >
-                  {t("change_password")}
+                  Parolni o'zgartirish
                 </button>
               ) : (
                 <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <h3 className="font-semibold text-slate-700">{t("change_password")}</h3>
+                  <h3 className="font-semibold text-slate-700">Parolni o'zgartirish</h3>
                   <input
                     type="password"
-                    placeholder={t("old_password")}
+                    placeholder="Eski parol"
                     value={oldPass}
                     onChange={(e) => setOldPass(e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   <input
                     type="password"
-                    placeholder={t("new_password")}
+                    placeholder="Yangi parol"
                     value={newPass}
                     onChange={(e) => setNewPass(e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
@@ -326,7 +362,7 @@ function ProfilePage() {
                 onClick={logout}
                 className="w-full py-3 bg-red-50 text-red-600 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition font-bold"
               >
-                <LogOut size={18} /> {t("logout")}
+                <LogOut size={18} /> Chiqish
               </button>
             </div>
           </div>

@@ -24,4 +24,7 @@ export const authAPI = {
   
   // Chiqish
   logout: () => axiosInstance.post('/auth/logout'),
+  
+  // Google orqali kirish (keyin to'liq qo'shamiz)
+  googleLogin: (googleData) => axiosInstance.post('/auth/google', googleData),
 };
