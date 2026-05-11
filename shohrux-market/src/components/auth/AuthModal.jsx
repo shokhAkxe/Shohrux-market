@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, User, Chrome } from "lucide-react";
+import { X, User } from "lucide-react";
+import { useGoogleLogin } from "@react-oauth/google";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
 import toast from "react-hot-toast";
@@ -19,6 +20,23 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
   
   const [loading, setLoading] = useState(false);
+
+  // ========== GOOGLE LOGIN ==========
+  const googleLoginHandler = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      const result = await googleLogin(tokenResponse.access_token);
+      setLoading(false);
+      if (result.success) {
+        onCloseLogin();
+        onCloseRegister();
+      }
+    },
+    onError: () => {
+      toast.error('Google login failed');
+      setLoading(false);
+    }
+  });
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -64,44 +82,12 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
     }
   };
 
-  const handleGoogle = async () => {
-    setLoading(true);
-    await googleLogin({ email: "demo@gmail.com", name: "Google User", googleId: "google123" });
-    setLoading(false);
-    onCloseLogin();
-  };
-
-  // Modal overlay styling
-  const overlayStyle = {
-    position: "fixed",
-    top: 0, left: 0, right: 0, bottom: 0,
-    background: "rgba(0,0,0,0.8)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000
-  };
-
   const modalStyle = {
     background: "white",
     width: "100%",
     maxWidth: "400px",
     borderRadius: "16px",
     overflow: "hidden"
-  };
-
-  const headerLoginStyle = {
-    background: "#2563eb",
-    padding: "24px 20px",
-    textAlign: "center",
-    position: "relative"
-  };
-
-  const headerRegisterStyle = {
-    background: "#059669",
-    padding: "20px",
-    textAlign: "center",
-    position: "relative"
   };
 
   const inputStyle = {
@@ -127,41 +113,27 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
     marginBottom: "12px"
   };
 
-  const formStyle = { padding: "20px" };
-
   return (
     <>
       {/* LOGIN MODAL */}
       <AnimatePresence>
         {isLoginOpen && (
-          <div style={overlayStyle}>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               style={modalStyle}
             >
-              <div style={headerLoginStyle}>
-                <button
-                  onClick={onCloseLogin}
-                  style={{
-                    position: "absolute",
-                    right: "16px",
-                    top: "16px",
-                    background: "none",
-                    border: "none",
-                    color: "white",
-                    cursor: "pointer"
-                  }}
-                >
+              <div className="bg-blue-600 p-6 text-center relative">
+                <button onClick={onCloseLogin} className="absolute right-4 top-4 text-white">
                   <X size={20} />
                 </button>
-                <User size={40} style={{ color: "white", margin: "0 auto 8px" }} />
-                <h2 style={{ color: "white", fontSize: "20px", fontWeight: "bold", margin: 0 }}>{t("login_title")}</h2>
+                <User size={40} className="text-white mx-auto mb-2" />
+                <h2 className="text-white text-xl font-bold">{t("login_title")}</h2>
               </div>
               
-              <form onSubmit={handleLogin} style={formStyle}>
+              <form onSubmit={handleLogin} className="p-5">
                 <input
                   type="text"
                   placeholder="Email yoki Telefon"
@@ -185,26 +157,23 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
                   {loading ? "Kutilmoqda..." : t("login")}
                 </button>
                 
+                {/* GOOGLE LOGIN BUTTON */}
                 <button
                   type="button"
-                  onClick={handleGoogle}
+                  onClick={() => googleLoginHandler()}
                   disabled={loading}
-                  style={{
-                    ...buttonStyle,
-                    background: "white",
-                    color: "#333",
-                    border: "1px solid #e2e8f0"
-                  }}
+                  className="w-full py-3 bg-white border border-gray-300 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-50 transition mb-3"
                 >
-                  <Chrome size={20} style={{ display: "inline", marginRight: "8px" }} /> {t("google_login")}
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                  <span>{t("google_login")}</span>
                 </button>
                 
-                <p style={{ textAlign: "center", fontSize: "14px", margin: 0 }}>
+                <p className="text-center text-sm">
                   {t("no_account")}
                   <button
                     type="button"
                     onClick={onSwitchToRegister}
-                    style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontWeight: "bold", marginLeft: "5px" }}
+                    className="text-blue-600 font-bold ml-1 hover:underline"
                   >
                     {t("register_now")}
                   </button>
@@ -218,34 +187,22 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
       {/* REGISTER MODAL */}
       <AnimatePresence>
         {isRegisterOpen && (
-          <div style={overlayStyle}>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               style={{ ...modalStyle, maxHeight: "90vh", overflowY: "auto" }}
             >
-              <div style={headerRegisterStyle}>
-                <button
-                  onClick={onCloseRegister}
-                  style={{
-                    position: "absolute",
-                    right: "16px",
-                    top: "16px",
-                    background: "none",
-                    border: "none",
-                    color: "white",
-                    cursor: "pointer"
-                  }}
-                >
+              <div className="bg-emerald-600 p-5 text-center relative">
+                <button onClick={onCloseRegister} className="absolute right-4 top-4 text-white">
                   <X size={20} />
                 </button>
-                <User size={36} style={{ color: "white", margin: "0 auto 8px" }} />
-                <h2 style={{ color: "white", fontSize: "18px", fontWeight: "bold", margin: 0 }}>{t("register_title")}</h2>
+                <User size={36} className="text-white mx-auto mb-2" />
+                <h2 className="text-white text-lg font-bold">{t("register_title")}</h2>
               </div>
               
-              <form onSubmit={handleRegister} style={formStyle}>
+              <form onSubmit={handleRegister} className="p-5">
                 <input
                   type="text"
                   placeholder={t("full_name")}
@@ -289,12 +246,12 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
                   {loading ? "Kutilmoqda..." : t("register")}
                 </button>
                 
-                <p style={{ textAlign: "center", fontSize: "14px", margin: 0 }}>
+                <p className="text-center text-sm">
                   {t("already_have_account")}
                   <button
                     type="button"
                     onClick={onSwitchToLogin}
-                    style={{ background: "none", border: "none", color: "#059669", cursor: "pointer", fontWeight: "bold", marginLeft: "5px" }}
+                    className="text-emerald-600 font-bold ml-1 hover:underline"
                   >
                     {t("login_now")}
                   </button>

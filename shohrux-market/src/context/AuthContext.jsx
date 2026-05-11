@@ -15,7 +15,6 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Profilni yuklash
   const loadUser = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -25,7 +24,6 @@ export const AuthProvider = ({ children }) => {
     
     try {
       const response = await authAPI.getMe();
-      console.log('✅ User loaded:', response.data);
       setUser(response.data);
       setIsAuthenticated(true);
     } catch (err) {
@@ -42,7 +40,6 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, []);
 
-  // Login
   const login = async (emailOrPhone, password) => {
     try {
       const response = await authAPI.login({ emailOrPhone, password });
@@ -59,7 +56,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register
+  // ========== GOOGLE LOGIN (YANGI QO'SHILDI) ==========
+  const googleLogin = async (credential) => {
+    try {
+      const response = await authAPI.googleLogin(credential);
+      const { user, token } = response.data;
+      localStorage.setItem('token', token);
+      setUser(user);
+      setIsAuthenticated(true);
+      toast.success('Google orqali kirish muvaffaqiyatli!');
+      return { success: true, user };
+    } catch (err) {
+      console.error('Google login error:', err);
+      const errorMsg = err.response?.data?.error || 'Google orqali kirishda xatolik!';
+      toast.error(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  };
+
   const register = async (userData) => {
     try {
       const response = await authAPI.register(userData);
@@ -76,34 +90,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Google Login (hozircha mock, keyin to'liq qo'shamiz)
-  const googleLogin = async (googleData) => {
-    try {
-      // TODO: Google OAuth2 integratsiyasi
-      toast.info('Google orqali kirish hozircha ishlab chiqilmoqda');
-      return { success: false };
-    } catch (err) {
-      toast.error('Google login failed');
-      return { success: false };
-    }
-  };
-
-  // Profilni yangilash (TO'G'RILANGAN)
   const updateProfile = async (data) => {
     try {
       const response = await authAPI.updateProfile(data);
-      console.log('✅ Profile updated:', response.data);
-      
-      // Yangilangan ma'lumotlarni user state ga saqlash
       if (response.data.user) {
         setUser(prev => ({ ...prev, ...response.data.user }));
       } else if (response.data) {
         setUser(prev => ({ ...prev, ...response.data }));
       }
-      
-      // Qayta yuklash
       await loadUser();
-      
       toast.success('Profil muvaffaqiyatli yangilandi!');
       return { success: true, user: response.data };
     } catch (err) {
@@ -114,35 +109,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Parolni o'zgartirish
   const changePassword = async (oldPassword, newPassword) => {
     try {
       await authAPI.changePassword({ oldPassword, newPassword });
       toast.success('Parol muvaffaqiyatli o\'zgartirildi!');
       return { success: true };
     } catch (err) {
-      console.error('Change password error:', err);
       const errorMsg = err.response?.data?.error || 'Parol o\'zgartirishda xatolik';
       toast.error(errorMsg);
       return { success: false, error: errorMsg };
     }
   };
 
-  // Buyurtma berish
   const addOrder = async (orderData) => {
     try {
       const response = await authAPI.addOrder(orderData);
       toast.success('Buyurtmangiz muvaffaqiyatli qabul qilindi!');
       return { success: true, order: response.data };
     } catch (err) {
-      console.error('Add order error:', err);
       const errorMsg = err.response?.data?.error || 'Buyurtma berishda xatolik';
       toast.error(errorMsg);
       return { success: false, error: errorMsg };
     }
   };
 
-  // Buyurtmalarni olish
   const getOrders = async () => {
     try {
       const response = await authAPI.getOrders();
@@ -153,7 +143,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Chiqish
   const logout = async () => {
     try {
       await authAPI.logout();
@@ -172,7 +161,7 @@ export const AuthProvider = ({ children }) => {
       user,
       isAuthenticated,
       loading,
-      loadUser,  // ✅ QO'SHILDI
+      loadUser,
       login,
       register,
       googleLogin,

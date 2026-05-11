@@ -7,6 +7,9 @@ export const authAPI = {
   // Kirish
   login: (credentials) => axiosInstance.post('/auth/login', credentials),
   
+  // Google orqali kirish (YANGI QO'SHILDI)
+  googleLogin: (credential) => axiosInstance.post('/auth/google', { credential }),
+  
   // Profilni olish
   getMe: () => axiosInstance.get('/auth/me'),
   
@@ -24,7 +27,4 @@ export const authAPI = {
   
   // Chiqish
   logout: () => axiosInstance.post('/auth/logout'),
-  
-  // Google orqali kirish (keyin to'liq qo'shamiz)
-  googleLogin: (googleData) => axiosInstance.post('/auth/google', googleData),
 };

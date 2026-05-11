@@ -1,13 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App.jsx";
 import "./styles/index.css";
 import "./i18n";
 
-// StrictMode ni vaqtincha o'chiramiz (input muammosini tekshirish uchun)
+// Google Client ID
+const GOOGLE_CLIENT_ID = "198997610488-c8ftrshc71augmf1u3gsmovju54eaf7s.apps.googleusercontent.com";
+
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <App />
-  // <React.StrictMode>
-  //   <App />
-  // </React.StrictMode>
+  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+    <App />
+  </GoogleOAuthProvider>
 );
