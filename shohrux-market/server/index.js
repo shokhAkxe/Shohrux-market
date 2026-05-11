@@ -358,6 +358,25 @@ app.post('/api/auth/logout', (req, res) => {
 app.use('*', (req, res) => {
   res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });
+// Bazani avtomatik yangilash funksiyasi
+const fixDatabase = async () => {
+  const client = await pool.connect();
+  try {
+    console.log("🛠 Bazani tekshirish boshlandi...");
+    // google_id ustunini qo'shish
+    await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;");
+    // picture ustunini qo'shish
+    await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS picture TEXT;");
+    console.log("✅ Baza muvaffaqiyatli yangilandi!");
+  } catch (err) {
+    console.error("❌ Bazani yangilashda xato:", err);
+  } finally {
+    client.release();
+  }
+};
+
+// Funksiyani chaqiramiz
+fixDatabase();
 
 // ========== START SERVER ==========
 app.listen(PORT, '0.0.0.0', () => {
