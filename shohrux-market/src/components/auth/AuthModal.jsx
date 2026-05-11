@@ -10,7 +10,7 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
   const { t } = useTranslation();
   const { register, login, googleLogin } = useAuth();
 
-  // Scroll lock - modal ochilganda sahifa aylanmasligi uchun
+  // Scroll lock
   useEffect(() => {
     if (isLoginOpen || isRegisterOpen) {
       document.body.style.overflow = "hidden";
@@ -38,15 +38,16 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
   
   const [loading, setLoading] = useState(false);
 
-  // ========== GOOGLE LOGIN (TO'G'RILANGAN) ==========
+  // ========== GOOGLE LOGIN ==========
   const googleLoginHandler = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       console.log("Google response:", tokenResponse);
       setLoading(true);
       try {
-        // access_token ni yuborish
+        // MUHIM: access_token ni yuborish
         const result = await googleLogin(tokenResponse.access_token);
         if (result.success) {
+          toast.success("Google orqali kirish muvaffaqiyatli!");
           onCloseLogin();
           onCloseRegister();
         }
@@ -229,6 +230,7 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
                   {loading ? "Kutilmoqda..." : t("login")}
                 </button>
                 
+                {/* GOOGLE LOGIN BUTTON */}
                 <button
                   type="button"
                   onClick={() => googleLoginHandler()}
