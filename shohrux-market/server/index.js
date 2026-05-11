@@ -21,7 +21,10 @@ app.use(express.json());
 const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_secret_key_2026';
 
 // ========== GOOGLE OAUTH2 ==========
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET
+);
 
 // ========== POSTGRESQL ==========
 const pool = new Pool({
@@ -57,7 +60,7 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('✅ Users table');
+    console.log('✅ Users table ready');
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS orders (
@@ -71,7 +74,7 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('✅ Orders table');
+    console.log('✅ Orders table ready');
 
     const testUser = await client.query('SELECT * FROM users WHERE email = $1', ['test@mail.com']);
     if (testUser.rows.length === 0) {
@@ -83,7 +86,7 @@ async function initDatabase() {
       console.log('✅ Test user: test@mail.com / 123456');
     }
 
-    console.log('🎉 DATABASE TAYYOR!');
+    console.log('🎉 DATABASE READY!');
   } catch (err) {
     console.error('DB init error:', err.message);
     dbConnected = false;
@@ -182,7 +185,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// ========== GOOGLE LOGIN (YANGI QO'SHILDI) ==========
+// ========== GOOGLE LOGIN ==========
 app.post('/api/auth/google', async (req, res) => {
   if (!dbConnected) return res.status(503).json({ error: 'Database ulanmagan!' });
   
