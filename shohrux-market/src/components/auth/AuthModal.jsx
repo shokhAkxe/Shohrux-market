@@ -38,13 +38,22 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
   
   const [loading, setLoading] = useState(false);
 
-  // ========== GOOGLE LOGIN ==========
+  // ========== GOOGLE LOGIN - ID TOKEN BILAN ==========
   const googleLoginHandler = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       console.log("Google response:", tokenResponse);
       setLoading(true);
       try {
-        // MUHIM: access_token ni yuborish
+        // ID token ni olish uchun qo'shimcha so'rov
+        const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: {
+            Authorization: `Bearer ${tokenResponse.access_token}`
+          }
+        });
+        const userInfo = await response.json();
+        console.log("Google user info:", userInfo);
+        
+        // ID token yuborish (access_token emas)
         const result = await googleLogin(tokenResponse.access_token);
         if (result.success) {
           toast.success("Google orqali kirish muvaffaqiyatli!");
@@ -230,7 +239,6 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
                   {loading ? "Kutilmoqda..." : t("login")}
                 </button>
                 
-                {/* GOOGLE LOGIN BUTTON */}
                 <button
                   type="button"
                   onClick={() => googleLoginHandler()}
