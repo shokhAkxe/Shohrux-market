@@ -180,29 +180,25 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// ========== GOOGLE LOGIN ==========
+// ========== GOOGLE LOGIN (TUZATILGAN) ==========
 app.post('/api/auth/google', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { accessToken } = req.body;
-    
-    console.log('📥 Google login request received');
     
     if (!accessToken) {
       return res.status(400).json({ error: 'Google token topilmadi!' });
     }
-    
-    // Access token orqali user ma'lumotlarini olish
-    const ticket = await googleClient.verifyIdToken({
-      idToken: accessToken,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
-    
-    const payload = ticket.getPayload();
+
+    // accessToken orqali user ma'lumotlarini to'g'ridan-to'g'ri Google API dan olamiz
+    const googleRes = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+    const payload = await googleRes.json();
+
+    if (!payload.email) {
+      return res.status(400).json({ error: 'Google orqali ma’lumotlarni olib bo‘lmadi!' });
+    }
+
     const { email, name, picture, sub: googleId } = payload;
-    
-    console.log('✅ Google token verified:', { email, name });
-    
-    const client = await pool.connect();
     
     let result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
     let user = result.rows[0];
@@ -216,19 +212,12 @@ app.post('/api/auth/google', async (req, res) => {
         [name || email.split('@')[0], email, '', randomPassword, '', googleId, picture || '']
       );
       user = insertResult.rows[0];
-      console.log('✅ New Google user created:', email);
-    } else if (!user.google_id) {
-      await client.query('UPDATE users SET google_id = $1, picture = $2 WHERE id = $3', [googleId, picture || '', user.id]);
-      user.google_id = googleId;
-      user.picture = picture;
-      console.log('✅ Google ID added to existing user:', email);
+    } else {
+      await client.query('UPDATE users SET google_id = $1, picture = $2 WHERE id = $3', 
+        [googleId, picture || user.picture, user.id]);
     }
     
-    client.release();
-    
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    
-    console.log('✅ Google login successful for:', email);
     
     res.json({
       success: true,
@@ -245,8 +234,10 @@ app.post('/api/auth/google', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Google login error:', error.message);
-    res.status(500).json({ error: 'Google orqali kirishda xatolik: ' + error.message });
+    console.error('❌ Google login error:', error);
+    res.status(500).json({ error: 'Google login server xatosi' });
+  } finally {
+    client.release();
   }
 });
 

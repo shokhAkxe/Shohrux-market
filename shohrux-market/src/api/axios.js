@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-// ========== BACKEND URL ==========
-// Production (Render)
 const API_URL = 'https://shohrux-market.onrender.com/api';
 
 const axiosInstance = axios.create({
@@ -10,7 +8,7 @@ const axiosInstance = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  timeout: 15000,
+  timeout: 30000, // 30 soniyaga oshirildi
   withCredentials: false,
 });
 
@@ -32,10 +30,8 @@ axiosInstance.interceptors.response.use(
       localStorage.removeItem('token');
       window.dispatchEvent(new CustomEvent('auth-logout'));
     }
-    
     const errorMessage = error.response?.data?.error || error.message || 'Tarmoq xatoligi!';
     error.message = errorMessage;
-    
     return Promise.reject(error);
   }
 );
