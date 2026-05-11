@@ -7,7 +7,7 @@ import { authAPI } from "../api/auth";
 import toast from "react-hot-toast";
 
 function ProfilePage() {
-  const { t, i18n } = useTranslation(); // i18n qo'shildi tilni aniqlash uchun
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user, updateProfile, changePassword, logout } = useAuth();
 
@@ -34,7 +34,6 @@ function ProfilePage() {
       setLoading(true);
       const response = await authAPI.getOrders();
       console.log("Buyurtmalar:", response.data);
-      // Backenddan ma'lumotlar muvaffaqiyatli kelsa set qilish
       setOrders(response.data || []);
     } catch (error) {
       console.error("Buyurtmalarni yuklashda xatolik:", error);
@@ -62,6 +61,12 @@ function ProfilePage() {
       setNewPass("");
       setShowPasswordForm(false);
     }
+  };
+
+  // Xavfsiz formatlash funksiyasi
+  const formatPrice = (price) => {
+    if (!price && price !== 0) return "0";
+    return Number(price).toLocaleString();
   };
 
   if (!user) {
@@ -170,7 +175,7 @@ function ProfilePage() {
               </div>
             </div>
 
-            {/* Order History */}
+            {/* Order History - TUZATILGAN */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Package size={18} /> {t("order_history")}
@@ -183,53 +188,80 @@ function ProfilePage() {
                 </div>
               ) : orders.length > 0 ? (
                 <div className="space-y-4">
-                  {orders.map((order, idx) => (
-                    <div key={order.id || idx} className="bg-slate-50 border border-slate-100 p-4 rounded-xl hover:shadow-md transition">
-                      <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <ShoppingBag size={16} className="text-blue-600" />
-                          <span className="font-bold text-slate-700">#{order.id.toString().slice(-6).toUpperCase()}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm">
-                          <Calendar size={14} />
-                          <span>{new Date(order.createdAt).toLocaleDateString('uz-UZ')}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2 mb-3 bg-white p-3 rounded-lg border border-slate-100">
-                        {order.items?.map((item, itemIdx) => (
-                          <div key={itemIdx} className="flex justify-between text-sm items-center">
-                            <span className="text-slate-600 font-medium">
-                              {item.nomi?.[i18n.language] || item.nomi?.uz || item.nomi} 
-                              <span className="text-slate-400 ml-1">x{item.quantity || 1}</span>
-                            </span>
-                            <span className="font-semibold text-slate-800">
-                              {(item.narxi * (item.quantity || 1)).toLocaleString()} so'm
+                  {orders.map((order, idx) => {
+                    // Xavfsiz ma'lumot olish
+                    const orderId = order?.id || order?._id || idx;
+                    const orderStatus = order?.status || 'pending';
+                    const orderDate = order?.created_at || order?.createdAt || order?.date;
+                    const totalAmount = order?.total_amount || order?.totalAmount || order?.total || 0;
+                    
+                    return (
+                      <div key={orderId} className="bg-slate-50 border border-slate-100 p-4 rounded-xl hover:shadow-md transition">
+                        <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <ShoppingBag size={16} className="text-blue-600" />
+                            <span className="font-bold text-slate-700">
+                              #{String(orderId).slice(-6).toUpperCase()}
                             </span>
                           </div>
-                        ))}
-                      </div>
-                      
-                      <div className="flex justify-between items-center pt-2">
-                        <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                          order.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                        }`}>
-                          {order.status === 'pending' ? t("pending") || 'Kutilmoqda' : t("completed") || 'Yetkazilgan'}
-                        </span>
-                        <div className="text-right">
-                          <p className="text-xs text-slate-400 uppercase tracking-wider">{t("total")}</p>
-                          <p className="font-bold text-blue-600 text-lg">
-                            {(order.totalAmount || order.total).toLocaleString()} so'm
-                          </p>
+                          <div className="flex items-center gap-2 text-sm text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm">
+                            <Calendar size={14} />
+                            <span>
+                              {orderDate ? new Date(orderDate).toLocaleDateString('uz-UZ') : 'Noma\'lum sana'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 mb-3 bg-white p-3 rounded-lg border border-slate-100">
+                          {order?.items && order.items.length > 0 ? (
+                            order.items.map((item, itemIdx) => {
+                              const itemName = item?.nomi?.[i18n.language] || item?.nomi?.uz || item?.nomi || 'Mahsulot';
+                              const itemPrice = item?.narxi || 0;
+                              const itemQty = item?.quantity || 1;
+                              const itemTotal = itemPrice * itemQty;
+                              
+                              return (
+                                <div key={itemIdx} className="flex justify-between text-sm items-center">
+                                  <span className="text-slate-600 font-medium">
+                                    {itemName} 
+                                    <span className="text-slate-400 ml-1">x{itemQty}</span>
+                                  </span>
+                                  <span className="font-semibold text-slate-800">
+                                    {formatPrice(itemTotal)} so'm
+                                  </span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-center text-slate-400 text-sm">Mahsulot ma'lumotlari mavjud emas</div>
+                          )}
+                        </div>
+                        
+                        <div className="flex justify-between items-center pt-2">
+                          <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                            orderStatus === 'pending' ? 'bg-amber-100 text-amber-700' : 
+                            orderStatus === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>
+                            {orderStatus === 'pending' ? 'Kutilmoqda' : 
+                             orderStatus === 'completed' ? 'Yetkazilgan' : 
+                             orderStatus}
+                          </span>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-400 uppercase tracking-wider">Jami</p>
+                            <p className="font-bold text-blue-600 text-lg">
+                              {formatPrice(totalAmount)} so'm
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                   <Package size={48} className="text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-400 font-medium">{t("no_orders") || "Hali buyurtmalar yo'q"}</p>
+                  <p className="text-slate-400 font-medium">Hali buyurtmalar yo'q</p>
                   <button 
                     onClick={() => navigate("/")} 
                     className="mt-4 text-blue-600 text-sm font-semibold hover:text-blue-700 underline-offset-4 hover:underline"
