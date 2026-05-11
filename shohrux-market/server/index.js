@@ -21,10 +21,10 @@ app.use(express.json());
 const JWT_SECRET = process.env.JWT_SECRET || 'shohrux_market_secret_key_2026';
 
 // ========== GOOGLE OAUTH2 ==========
-const googleClient = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET
-);
+const googleClient = new OAuth2Client({
+  clientId: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+});
 
 // ========== POSTGRESQL ==========
 const pool = new Pool({
@@ -187,17 +187,19 @@ app.post('/api/auth/login', async (req, res) => {
 
 // ========== GOOGLE LOGIN ==========
 app.post('/api/auth/google', async (req, res) => {
-  if (!dbConnected) return res.status(503).json({ error: 'Database ulanmagan!' });
-  
-  const client = await pool.connect();
+  let client;
   try {
     const { credential } = req.body;
     
+    console.log('📥 Google login request received');
+    
     if (!credential) {
+      console.log('❌ No credential provided');
       return res.status(400).json({ error: 'Google token topilmadi!' });
     }
     
-    // Google token ni tekshirish
+    console.log('🔐 Verifying Google token...');
+    
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID
@@ -206,14 +208,14 @@ app.post('/api/auth/google', async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, picture, sub: googleId } = payload;
     
-    console.log('🔐 Google login:', { email, name });
+    console.log('✅ Google token verified:', { email, name });
     
-    // Foydalanuvchi mavjudligini tekshirish
+    client = await pool.connect();
+    
     let result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
     let user = result.rows[0];
     
     if (!user) {
-      // Yangi foydalanuvchi yaratish
       const randomPassword = await bcrypt.hash(googleId + Date.now(), 10);
       const insertResult = await client.query(
         `INSERT INTO users (full_name, email, phone, password, address, google_id, picture) 
@@ -224,7 +226,6 @@ app.post('/api/auth/google', async (req, res) => {
       user = insertResult.rows[0];
       console.log('✅ New Google user created:', email);
     } else if (!user.google_id) {
-      // Mavjud foydalanuvchiga google_id qo'shish
       await client.query('UPDATE users SET google_id = $1, picture = $2 WHERE id = $3', [googleId, picture || '', user.id]);
       user.google_id = googleId;
       user.picture = picture;
@@ -232,6 +233,8 @@ app.post('/api/auth/google', async (req, res) => {
     }
     
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    
+    console.log('✅ Google login successful for:', email);
     
     res.json({
       success: true,
@@ -248,10 +251,17 @@ app.post('/api/auth/google', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Google login error:', error);
-    res.status(500).json({ error: 'Google orqali kirishda xatolik yuz berdi!' });
+    console.error('❌ Google login error:', error.message);
+    
+    if (error.message.includes('Invalid token')) {
+      res.status(401).json({ error: 'Google token notogri!' });
+    } else if (error.message.includes('audience')) {
+      res.status(401).json({ error: 'Google Client ID mos kelmadi!' });
+    } else {
+      res.status(500).json({ error: 'Google orqali kirishda xatolik: ' + error.message });
+    }
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 
