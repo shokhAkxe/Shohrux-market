@@ -212,10 +212,12 @@ app.post('/api/auth/google', async (req, res) => {
     
     client = await pool.connect();
     
+    // Check if user exists
     let result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
     let user = result.rows[0];
     
     if (!user) {
+      // Create new user
       const randomPassword = await bcrypt.hash(googleId + Date.now(), 10);
       const insertResult = await client.query(
         `INSERT INTO users (full_name, email, phone, password, address, google_id, picture) 
@@ -226,6 +228,7 @@ app.post('/api/auth/google', async (req, res) => {
       user = insertResult.rows[0];
       console.log('✅ New Google user created:', email);
     } else if (!user.google_id) {
+      // Add google_id to existing user
       await client.query('UPDATE users SET google_id = $1, picture = $2 WHERE id = $3', [googleId, picture || '', user.id]);
       user.google_id = googleId;
       user.picture = picture;
@@ -378,7 +381,7 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ success: true, message: 'Tizimdan chiqildi!' });
 });
 
-// ========== 404 HANDLER ==========
+// ========== 404 HANDLER (ENG OXIRIDA) ==========
 app.use('*', (req, res) => {
   res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });
