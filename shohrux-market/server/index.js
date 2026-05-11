@@ -35,7 +35,6 @@ const pool = new Pool({
 
 let dbConnected = false;
 
-// Init DB
 async function initDatabase() {
   const client = await pool.connect();
   try {
@@ -104,12 +103,11 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// Health
+// ========== ROUTES ==========
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), database: dbConnected ? 'connected' : 'disconnected' });
 });
 
-// Register
 app.post('/api/auth/register', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -130,7 +128,6 @@ app.post('/api/auth/register', async (req, res) => {
   } finally { client.release(); }
 });
 
-// Login
 app.post('/api/auth/login', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -144,7 +141,7 @@ app.post('/api/auth/login', async (req, res) => {
   } finally { client.release(); }
 });
 
-// GOOGLE LOGIN - MUHIM QISM!
+// ========== GOOGLE LOGIN ROUTE ==========
 app.post('/api/auth/google', async (req, res) => {
   try {
     const { credential } = req.body;
@@ -183,7 +180,6 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-// Profile
 app.get('/api/auth/me', verifyToken, async (req, res) => {
   const client = await pool.connect();
   try {
