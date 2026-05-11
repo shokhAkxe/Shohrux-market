@@ -45,7 +45,6 @@ function ProfilePage() {
     try {
       setLoading(true);
       const response = await authAPI.getOrders();
-      console.log("Buyurtmalar:", response.data);
       setOrders(response.data || []);
     } catch (error) {
       console.error("Buyurtmalarni yuklashda xatolik:", error);
@@ -56,7 +55,6 @@ function ProfilePage() {
   };
 
   const handleSave = async () => {
-    // Faqat o'zgartirilgan maydonlarni yuborish
     const dataToUpdate = {};
     if (editData.full_name !== user?.full_name) dataToUpdate.full_name = editData.full_name;
     if (editData.email !== user?.email) dataToUpdate.email = editData.email;
@@ -64,7 +62,7 @@ function ProfilePage() {
     if (editData.address !== user?.address) dataToUpdate.address = editData.address;
     
     if (Object.keys(dataToUpdate).length === 0) {
-      toast.error("Hech qanday o'zgarish yo'q!");
+      toast.error(t("no_changes") || "Hech qanday o'zgarish yo'q!");
       setIsEditing(false);
       return;
     }
@@ -72,19 +70,18 @@ function ProfilePage() {
     const res = await updateProfile(dataToUpdate);
     if (res.success) {
       setIsEditing(false);
-      // Profilni qayta yuklash
       await loadUser();
-      toast.success("Profil muvaffaqiyatli yangilandi!");
+      toast.success(t("profile_updated_success") || "Profil muvaffaqiyatli yangilandi!");
     }
   };
 
   const handleChangePassword = async () => {
     if (!oldPass || !newPass) {
-      toast.error(t("fill_all_fields"));
+      toast.error(t("FillAllFields"));
       return;
     }
     if (newPass.length < 4) {
-      toast.error("Yangi parol kamida 4 belgidan iborat bo'lishi kerak!");
+      toast.error(t("password_short") || "Yangi parol kamida 4 belgidan iborat bo'lishi kerak!");
       return;
     }
     const res = await changePassword(oldPass, newPass);
@@ -92,7 +89,7 @@ function ProfilePage() {
       setOldPass("");
       setNewPass("");
       setShowPasswordForm(false);
-      toast.success("Parol muvaffaqiyatli o'zgartirildi!");
+      toast.success(t("password_changed_success") || "Parol muvaffaqiyatli o'zgartirildi!");
     }
   };
 
@@ -102,21 +99,21 @@ function ProfilePage() {
   };
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return "Noma'lum sana";
+    if (!dateStr) return t("unknown_date") || "Noma'lum sana";
     try {
-      return new Date(dateStr).toLocaleDateString('uz-UZ');
+      const langMap = { uz: 'uz-UZ', ru: 'ru-RU', en: 'en-US' };
+      return new Date(dateStr).toLocaleDateString(langMap[i18n.language] || 'uz-UZ');
     } catch {
-      return "Noma'lum sana";
+      return t("unknown_date") || "Noma'lum sana";
     }
   };
 
-  // Agar user bo'lmasa
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 pt-20 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-500">Ma'lumotlar yuklanmoqda...</p>
+          <p className="text-slate-500">{t("loading_data") || "Ma'lumotlar yuklanmoqda..."}</p>
         </div>
       </div>
     );
@@ -134,8 +131,8 @@ function ProfilePage() {
                   <User size={32} className="text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">{user?.full_name || "Foydalanuvchi"}</h1>
-                  <p className="opacity-80">{user?.email || "Email mavjud emas"}</p>
+                  <h1 className="text-2xl font-bold">{user?.full_name || t("user_default")}</h1>
+                  <p className="opacity-80">{user?.email || t("no_email")}</p>
                 </div>
               </div>
               {!isEditing ? (
@@ -143,14 +140,14 @@ function ProfilePage() {
                   onClick={() => setIsEditing(true)}
                   className="px-4 py-2 bg-white/20 rounded-xl hover:bg-white/30 transition flex items-center gap-2"
                 >
-                  <Edit2 size={16} /> Tahrirlash
+                  <Edit2 size={16} /> {t("Edit")}
                 </button>
               ) : (
                 <button
                   onClick={handleSave}
                   className="px-4 py-2 bg-green-500 rounded-xl hover:bg-green-600 transition flex items-center gap-2"
                 >
-                  <Save size={16} /> Saqlash
+                  <Save size={16} /> {t("save_button") || "Saqlash"}
                 </button>
               )}
             </div>
@@ -161,61 +158,61 @@ function ProfilePage() {
             {/* Personal Info */}
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <User size={18} /> Shaxsiy ma'lumotlar
+                <User size={18} /> {t("PersonalInfo")}
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-500">Ism Familiya</label>
+                  <label className="text-sm text-slate-500">{t("FullName")}</label>
                   {isEditing ? (
                     <input
                       value={editData.full_name}
                       onChange={(e) => setEditData({ ...editData, full_name: e.target.value })}
                       className="w-full p-2 border rounded-lg mt-1 focus:outline-none focus:border-blue-500"
-                      placeholder="Ism familiyangiz"
+                      placeholder={t("FullName")}
                     />
                   ) : (
-                    <p className="font-medium mt-1">{user?.full_name || "Ma'lumot yo'q"}</p>
+                    <p className="font-medium mt-1">{user?.full_name || t("no_info")}</p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-slate-500">Email</label>
+                  <label className="text-sm text-slate-500">{t("Email")}</label>
                   {isEditing ? (
                     <input
                       type="email"
                       value={editData.email}
                       onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                       className="w-full p-2 border rounded-lg mt-1 focus:outline-none focus:border-blue-500"
-                      placeholder="Email manzilingiz"
+                      placeholder={t("Email")}
                     />
                   ) : (
-                    <p className="font-medium mt-1">{user?.email || "Ma'lumot yo'q"}</p>
+                    <p className="font-medium mt-1">{user?.email || t("no_info")}</p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-slate-500">Telefon</label>
+                  <label className="text-sm text-slate-500">{t("Phone")}</label>
                   {isEditing ? (
                     <input
                       type="tel"
                       value={editData.phone}
                       onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
                       className="w-full p-2 border rounded-lg mt-1 focus:outline-none focus:border-blue-500"
-                      placeholder="Telefon raqamingiz"
+                      placeholder={t("Phone")}
                     />
                   ) : (
-                    <p className="font-medium mt-1">{user?.phone || "Ma'lumot yo'q"}</p>
+                    <p className="font-medium mt-1">{user?.phone || t("no_info")}</p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-slate-500">Manzil</label>
+                  <label className="text-sm text-slate-500">{t("Address")}</label>
                   {isEditing ? (
                     <input
                       value={editData.address}
                       onChange={(e) => setEditData({ ...editData, address: e.target.value })}
                       className="w-full p-2 border rounded-lg mt-1 focus:outline-none focus:border-blue-500"
-                      placeholder="Manzilingiz"
+                      placeholder={t("Address")}
                     />
                   ) : (
-                    <p className="font-medium mt-1">{user?.address || "Ma'lumot yo'q"}</p>
+                    <p className="font-medium mt-1">{user?.address || t("no_info")}</p>
                   )}
                 </div>
               </div>
@@ -224,13 +221,13 @@ function ProfilePage() {
             {/* Order History */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Package size={18} /> Buyurtmalar tarixi
+                <Package size={18} /> {t("OrderHistory")}
               </h3>
               
               {loading ? (
                 <div className="text-center py-8">
                   <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                  <p className="text-slate-400 mt-2">Buyurtmalar yuklanmoqda...</p>
+                  <p className="text-slate-400 mt-2">{t("loading_orders") || "Buyurtmalar yuklanmoqda..."}</p>
                 </div>
               ) : orders.length > 0 ? (
                 <div className="space-y-4">
@@ -256,7 +253,7 @@ function ProfilePage() {
                         <div className="space-y-2 mb-3 bg-white p-3 rounded-lg border border-slate-100">
                           {order?.items && order.items.length > 0 ? (
                             order.items.map((item, itemIdx) => {
-                              const itemName = item?.nomi?.[i18n.language] || item?.nomi?.uz || item?.nomi || 'Mahsulot';
+                              const itemName = item?.nomi?.[i18n.language] || item?.nomi?.uz || item?.nomi || t("product_default");
                               const itemPrice = item?.narxi || 0;
                               const itemQty = item?.quantity || 1;
                               
@@ -267,26 +264,26 @@ function ProfilePage() {
                                     <span className="text-slate-400 ml-1">x{itemQty}</span>
                                   </span>
                                   <span className="font-semibold text-slate-800">
-                                    {formatPrice(itemPrice * itemQty)} so'm
+                                    {formatPrice(itemPrice * itemQty)} {t("Sum")}
                                   </span>
                                 </div>
                               );
                             })
                           ) : (
                             <div className="text-center text-slate-400 text-sm py-2">
-                              Mahsulot ma'lumotlari mavjud emas
+                              {t("no_product_info") || "Mahsulot ma'lumotlari mavjud emas"}
                             </div>
                           )}
                         </div>
                         
                         <div className="flex justify-between items-center pt-2">
-                          <span className="text-xs px-3 py-1 rounded-full font-medium bg-amber-100 text-amber-700">
-                            {order?.status === 'pending' ? 'Kutilmoqda' : 'Yetkazilgan'}
+                          <span className={`text-xs px-3 py-1 rounded-full font-medium ${order?.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                            {order?.status === 'pending' ? t("Pending") : t("Completed")}
                           </span>
                           <div className="text-right">
-                            <p className="text-xs text-slate-400 uppercase tracking-wider">Jami</p>
+                            <p className="text-xs text-slate-400 uppercase tracking-wider">{t("OrderTotal")}</p>
                             <p className="font-bold text-blue-600 text-lg">
-                              {formatPrice(totalAmount)} so'm
+                              {formatPrice(totalAmount)} {t("Sum")}
                             </p>
                           </div>
                         </div>
@@ -297,12 +294,12 @@ function ProfilePage() {
               ) : (
                 <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                   <Package size={48} className="text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-400 font-medium">Hali buyurtmalar yo'q</p>
+                  <p className="text-slate-400 font-medium">{t("no_orders") || "Hali buyurtmalar yo'q"}</p>
                   <button 
                     onClick={() => navigate("/")} 
                     className="mt-4 text-blue-600 text-sm font-semibold hover:text-blue-700 transition"
                   >
-                    Xaridni boshlash
+                    {t("start_shopping") || "Xaridni boshlash"}
                   </button>
                 </div>
               )}
@@ -315,21 +312,21 @@ function ProfilePage() {
                   onClick={() => setShowPasswordForm(true)}
                   className="text-blue-600 hover:underline font-medium"
                 >
-                  Parolni o'zgartirish
+                  {t("ChangePassword")}
                 </button>
               ) : (
                 <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <h3 className="font-semibold text-slate-700">Parolni o'zgartirish</h3>
+                  <h3 className="font-semibold text-slate-700">{t("ChangePassword")}</h3>
                   <input
                     type="password"
-                    placeholder="Eski parol"
+                    placeholder={t("old_password") || "Eski parol"}
                     value={oldPass}
                     onChange={(e) => setOldPass(e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   <input
                     type="password"
-                    placeholder="Yangi parol"
+                    placeholder={t("new_password") || "Yangi parol"}
                     value={newPass}
                     onChange={(e) => setNewPass(e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
@@ -339,7 +336,7 @@ function ProfilePage() {
                       onClick={handleChangePassword}
                       className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
                     >
-                      Saqlash
+                      {t("save_button") || "Saqlash"}
                     </button>
                     <button
                       onClick={() => {
@@ -349,7 +346,7 @@ function ProfilePage() {
                       }}
                       className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-100 transition"
                     >
-                      Bekor qilish
+                      {t("cancel_button") || "Bekor qilish"}
                     </button>
                   </div>
                 </div>
@@ -362,7 +359,7 @@ function ProfilePage() {
                 onClick={logout}
                 className="w-full py-3 bg-red-50 text-red-600 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition font-bold"
               >
-                <LogOut size={18} /> Chiqish
+                <LogOut size={18} /> {t("Logout")}
               </button>
             </div>
           </div>

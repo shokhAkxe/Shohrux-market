@@ -6,12 +6,11 @@ function Footer() {
   const { t } = useTranslation();
 
   const quickLinks = [
-    { path: "/", label: "Bosh sahifa" },
-    { path: "/products", label: "Mahsulotlar" },
-    { path: "/wishlist", label: "Yoqtirilganlar" },
-    { path: "/cart", label: "Savat" },
-    { path: "/about", label: "Biz haqimizda" },
-    { path: "/contact", label: "Kontakt" },
+    { path: "/", label: t("Home") },
+    { path: "/products", label: t("Products") },
+    { path: "/wishlist", label: t("Wishlist") },
+    { path: "/cart", label: t("cart") }, 
+    { path: "/contact", label: t("Contact") },
   ];
 
   const socialLinks = [
@@ -25,13 +24,14 @@ function Footer() {
     <footer className="bg-slate-900 text-white mt-auto">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:py-10 md:py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+          
           {/* Brand */}
           <div>
             <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent mb-3 sm:mb-4">
               SHOHRUX MARKET
             </h3>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Eng yangi va sifatli texnologiyalar siz uchun. Tez yetkazib berish, original mahsulotlar.
+              {t("footer_desc")}
             </p>
             <div className="flex gap-3 sm:gap-4 mt-4">
               {socialLinks.map((social, idx) => (
@@ -50,7 +50,7 @@ function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4">Menyu</h4>
+            <h4 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4">{t("menu")}</h4>
             <ul className="space-y-2">
               {quickLinks.map((link) => (
                 <li key={link.path}>
@@ -64,44 +64,45 @@ function Footer() {
 
           {/* Contact Info */}
           <div>
-            <h4 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4">Bog'lanish</h4>
+            <h4 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4">{t("contact")}</h4>
             <ul className="space-y-2 sm:space-y-3">
-              <li className="flex items-center gap-2 sm:gap-3 text-slate-400 text-sm">
-                <MapPin size={14} className="sm:w-4 sm:h-4" /> Toshkent sh., Chilonzor tumani
+              <li className="flex items-start gap-2 sm:gap-3 text-slate-400 text-sm">
+                <MapPin size={14} className="sm:w-4 sm:h-4 mt-1 flex-shrink-0" /> 
+                {t("address_text")}
               </li>
               <li className="flex items-center gap-2 sm:gap-3 text-slate-400 text-sm">
-                <Phone size={14} className="sm:w-4 sm:h-4" /> +998 99 123 45 67
+                <Phone size={14} className="sm:w-4 sm:h-4 flex-shrink-0" /> +998 99 123 45 67
               </li>
               <li className="flex items-center gap-2 sm:gap-3 text-slate-400 text-sm">
-                <Mail size={14} className="sm:w-4 sm:h-4" /> info@shohruxmarket.uz
+                <Mail size={14} className="sm:w-4 sm:h-4 flex-shrink-0" /> info@shohruxmarket.uz
               </li>
               <li className="flex items-center gap-2 sm:gap-3 text-slate-400 text-sm">
-                <Clock size={14} className="sm:w-4 sm:h-4" /> Dush - Shan: 09:00 - 21:00
+                <Clock size={14} className="sm:w-4 sm:h-4 flex-shrink-0" /> {t("work_hours")}
               </li>
             </ul>
           </div>
 
           {/* Newsletter */}
           <div>
-            <h4 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4">Yangiliklar</h4>
+            <h4 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4">{t("news_title")}</h4>
             <p className="text-slate-400 text-sm mb-3">
-              Yangi mahsulotlar va aksiyalardan xabardor bo'ling
+              {t("news_desc")}
             </p>
             <div className="flex flex-col sm:flex-row">
               <input
                 type="email"
-                placeholder="Email manzilingiz"
+                placeholder={t("email_placeholder")}
                 className="w-full px-3 sm:px-4 py-2 rounded-lg sm:rounded-l-xl sm:rounded-r-none bg-slate-800 text-white text-sm outline-none focus:ring-1 focus:ring-blue-500"
               />
               <button className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-blue-600 rounded-lg sm:rounded-r-xl sm:rounded-l-none text-sm font-medium hover:bg-blue-700 transition mt-2 sm:mt-0">
-                Obuna
+                {t("subscribe")}
               </button>
             </div>
           </div>
         </div>
 
         <div className="border-t border-slate-800 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center text-slate-500 text-xs sm:text-sm">
-          <p>&copy; 2024 SHOHRUX MARKET. Barcha huquqlar himoyalangan.</p>
+          <p>&copy; {new Date().getFullYear()} SHOHRUX MARKET. {t("all_rights")}</p>
         </div>
       </div>
     </footer>

@@ -312,7 +312,7 @@ function ProductModal({ product, onClose, onProductClick }) {
                       </motion.button>
                     </div>
                     <p className="text-xs text-slate-400 mt-2">
-                      Jami: {(product.narxi * quantity).toLocaleString()} so'm
+                  
                     </p>
                   </motion.div>
 
