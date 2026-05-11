@@ -36,6 +36,7 @@ const pool = new Pool({
 
 let dbConnected = false;
 
+// ========== DATABASE TABLES ==========
 async function initDatabase() {
   const client = await pool.connect();
   try {
@@ -224,6 +225,7 @@ app.post('/api/auth/google', async (req, res) => {
       await client.query('UPDATE users SET google_id = $1, picture = $2 WHERE id = $3', [googleId, picture || '', user.id]);
       user.google_id = googleId;
       user.picture = picture;
+      console.log('✅ Google ID added to existing user:', email);
     }
     
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
