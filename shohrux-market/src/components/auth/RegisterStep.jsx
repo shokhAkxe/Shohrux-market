@@ -84,41 +84,51 @@ function RegisterStep({ isOpen, onClose, onSwitch, handleRegister, loading, styl
             autoComplete="off"
           />
           
-          <div style={styles.passwordWrapperStyle}>
-            <input
-              type={showPass ? "text" : "password"}
-              placeholder={t("password")}
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              style={{ ...styles.inputStyle, marginBottom: 0 }}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPass(!showPass)}
-              style={styles.passwordIconStyle}
-            >
-              {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-          </div>
+         {/* --- ASOSIY PAROL --- */}
+<div style={styles.passwordWrapperStyle}>
+  <input
+    type={showPass ? "text" : "password"}
+    placeholder={t("password")}
+    value={formData.password}
+    onChange={(e) => setFormData({...formData, password: e.target.value})}
+    style={{ ...styles.inputStyle, marginBottom: 0 }}
+    autoComplete="new-password"
+  />
+  
+  {/* Faqat parol yozila boshlaganda chiqadi */}
+  {formData.password?.length > 0 && (
+    <button
+      type="button"
+      onClick={() => setShowPass(!showPass)}
+      style={styles.passwordIconStyle}
+    >
+      {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
+    </button>
+  )}
+</div>
 
-          <div style={styles.passwordWrapperStyle}>
-            <input
-              type={showConfirm ? "text" : "password"}
-              placeholder={t("confirm_password")}
-              value={formData.confirm}
-              onChange={(e) => setFormData({...formData, confirm: e.target.value})}
-              style={{ ...styles.inputStyle, marginBottom: 0 }}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm(!showConfirm)}
-              style={styles.passwordIconStyle}
-            >
-              {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-          </div>
+{/* --- PAROLNI TASDIQLASH --- */}
+<div style={styles.passwordWrapperStyle}>
+  <input
+    type={showConfirm ? "text" : "password"}
+    placeholder={t("confirm_password")}
+    value={formData.confirm}
+    onChange={(e) => setFormData({...formData, confirm: e.target.value})}
+    style={{ ...styles.inputStyle, marginBottom: 0 }}
+    autoComplete="new-password"
+  />
+  
+  {/* Faqat tasdiqlash paroli yozila boshlaganda chiqadi */}
+  {formData.confirm?.length > 0 && (
+    <button
+      type="button"
+      onClick={() => setShowConfirm(!showConfirm)}
+      style={styles.passwordIconStyle}
+    >
+      {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+    </button>
+  )}
+</div>
 
           <button
             type="submit"

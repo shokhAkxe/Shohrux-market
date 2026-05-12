@@ -227,3 +227,8 @@
 .animate-pulse {
   animation: pulse 0.5s ease-in-out;
 }
+/* Brauzerning standart ko'zchalarini o'chirish */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

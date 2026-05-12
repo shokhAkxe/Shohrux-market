@@ -1,4 +1,4 @@
-import { useEffect } from "react"; // useEffect qo'shildi
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Minus, Trash2, ShoppingBag } from "lucide-react";
 import { useCartStore } from "../../store/useCartStore";
@@ -7,16 +7,15 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-function CartSidebar({ isOpen, onClose, onCheckout }) {
+function CartSidebar({ isOpen, onClose }) {
   const { items, addToCart, decreaseQuantity, removeFromCart, clearCart } = useCartStore();
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { isAuthenticated, openLogin } = useAuth();
 
-  // 1. Sidebar ochilganda asosiy sahifa (body) skrolini to'xtatish
+  // Sidebar ochilganda asosiy sahifa (body) skrolini to'xtatish
   useEffect(() => {
     if (isOpen) {
-      // Skrol o'chganda sayt qimirlab qolmasligi uchun scrollbar kengligini hisoblash
       const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = "hidden";
       document.body.style.paddingRight = `${scrollBarWidth}px`;
@@ -33,22 +32,44 @@ function CartSidebar({ isOpen, onClose, onCheckout }) {
   const totalPrice = items.reduce((sum, item) => sum + item.narxi * (item.quantity || 1), 0);
   const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
-  const handleOrderClick = () => {
-    if (!user) {
-      toast.error(t("please_login_first")); // Tarjima kaliti ishlatildi
-      onClose();
-      // Agar sizda login modal bo'lsa modalni oching, bo'lmasa navigate ishlatiladi
-      navigate("/login"); 
+  // Buyurtma berish tugmasi bosilganda
+  const handleOrderClick = (e) => {
+    // 1. Sahifa yangilanib (refresh) ketmasligi uchun
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (!isAuthenticated) {
+      const messages = {
+        uz: "Iltimos, buyurtma berish uchun tizimga kiring",
+        ru: "Пожалуйста, войдите в систему, чтобы оформить заказ",
+        en: "Please log in to place an order"
+      };
+      
+      const currentLang = i18n.language || 'uz';
+      toast.error(messages[currentLang] || messages.uz);
+      
+      onClose();     // Savatni yopish
+      openLogin();   // Login modalini ochish
       return;
     }
-    onCheckout();
+    
+    // 2. Login qilgan bo'lsa
+    onClose();       // Sidebar-ni yopish
+    
+    // 3. To'g'ridan-to'g'ri /cart sahifasiga yo'naltirish
+    // Agar muammo davom etsa, kechikish (setTimeout) bilan yuboramiz
+    setTimeout(() => {
+      navigate("/cart"); 
+    }, 100);
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[300] flex justify-end">
-          {/* Overlay - Orqa fonni xiralashtirish */}
+          {/* Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -78,7 +99,7 @@ function CartSidebar({ isOpen, onClose, onCheckout }) {
               </button>
             </div>
 
-            {/* Mahsulotlar ro'yxati (Faqat shu qism skrol bo'ladi) */}
+            {/* Mahsulotlar ro'yxati */}
             <div className="flex-1 overflow-y-auto p-5 space-y-4 overscroll-contain">
               {items.length === 0 ? (
                 <div className="text-center py-16">
@@ -87,19 +108,38 @@ function CartSidebar({ isOpen, onClose, onCheckout }) {
                 </div>
               ) : (
                 items.map((item) => {
-                  // i18n tarjimalarini tekshirish
                   const name = item.nomi?.[i18n.language] || item.nomi?.uz || item.nomi;
                   return (
                     <div key={item.id} className="flex gap-3 bg-slate-50 p-3 rounded-xl hover:bg-slate-100 transition-colors">
                       <img src={item.img} alt={name} className="w-16 h-16 object-contain bg-white rounded-lg shadow-sm" />
                       <div className="flex-1">
                         <h3 className="font-medium text-sm line-clamp-1">{name}</h3>
-                        <p className="text-blue-600 font-bold text-sm">{item.narxi.toLocaleString()} {t("sum")}</p>
+                        <p className="text-blue-600 font-bold text-sm">
+                          {item.narxi.toLocaleString()} {t("sum")}
+                        </p>
                         <div className="flex items-center gap-2 mt-2">
-                          <button onClick={() => decreaseQuantity(item.id)} className="w-7 h-7 bg-white rounded-lg shadow-sm flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"><Minus size={14} /></button>
+                          <button 
+                            type="button"
+                            onClick={() => decreaseQuantity(item.id)} 
+                            className="w-7 h-7 bg-white rounded-lg shadow-sm flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
+                          >
+                            <Minus size={14} />
+                          </button>
                           <span className="font-medium w-6 text-center">{item.quantity || 1}</span>
-                          <button onClick={() => addToCart(item)} className="w-7 h-7 bg-white rounded-lg shadow-sm flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"><Plus size={14} /></button>
-                          <button onClick={() => removeFromCart(item.id)} className="ml-auto p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                          <button 
+                            type="button"
+                            onClick={() => addToCart(item)} 
+                            className="w-7 h-7 bg-white rounded-lg shadow-sm flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
+                          >
+                            <Plus size={14} />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => removeFromCart(item.id)} 
+                            className="ml-auto p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -108,21 +148,28 @@ function CartSidebar({ isOpen, onClose, onCheckout }) {
               )}
             </div>
 
-            {/* Footer - Jami va buyurtma */}
+            {/* Footer */}
             {items.length > 0 && (
               <div className="p-5 border-t bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                 <div className="flex justify-between mb-4">
                   <span className="font-medium text-slate-600">{t("total")}</span>
-                  <span className="text-xl font-bold text-slate-900">{totalPrice.toLocaleString()} {t("sum")}</span>
+                  <span className="text-xl font-bold text-slate-900">
+                    {totalPrice.toLocaleString()} {t("sum")}
+                  </span>
                 </div>
                 <div className="space-y-3">
                   <button
-                    onClick={handleOrderClick}
+                    type="button" // MUHIM: submit bo'lib ketmasligi uchun
+                    onClick={(e) => handleOrderClick(e)}
                     className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-[0.98] transition-all"
                   >
                     {t("checkout")}
                   </button>
-                  <button onClick={clearCart} className="w-full py-2 text-sm text-red-400 hover:text-red-600 transition-colors">
+                  <button 
+                    type="button"
+                    onClick={clearCart} 
+                    className="w-full py-2 text-sm text-red-400 hover:text-red-600 transition-colors"
+                  >
                     {t("clear_cart")}
                   </button>
                 </div>

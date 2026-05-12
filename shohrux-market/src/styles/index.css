@@ -89,3 +89,8 @@
     transform: rotate(360deg);
   }
 }
+/* Brauzerning standart ko'zchalarini o'chirish */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

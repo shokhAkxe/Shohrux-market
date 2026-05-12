@@ -15,6 +15,24 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // --- MODALLAR UCHUN STATE-LAR ---
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+
+  // --- MODALLARNI BOSHQARISH FUNKSIYALARI ---
+  const openLogin = () => {
+    setIsRegisterOpen(false);
+    setIsLoginOpen(true);
+  };
+
+  const openRegister = () => {
+    setIsLoginOpen(false);
+    setIsRegisterOpen(true);
+  };
+
+  const closeLogin = () => setIsLoginOpen(false);
+  const closeRegister = () => setIsRegisterOpen(false);
+
   // ========== PROFILNI YUKLASH ==========
   const loadUser = async () => {
     const token = localStorage.getItem('token');
@@ -50,6 +68,10 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
+      
+      // Muvaffaqiyatli kirganda modalni yopamiz
+      setIsLoginOpen(false); 
+      
       toast.success('Xush kelibsiz!');
       return { success: true, user };
     } catch (err) {
@@ -67,6 +89,10 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
+      
+      // Muvaffaqiyatli ro'yxatdan o'tganda modalni yopamiz
+      setIsRegisterOpen(false);
+
       toast.success("Ro'yxatdan o'tish muvaffaqiyatli!");
       return { success: true, user };
     } catch (err) {
@@ -85,11 +111,15 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
+      
+      // Modalni yopish
+      setIsLoginOpen(false);
+      setIsRegisterOpen(false);
+
       toast.success('Google orqali kirish muvaffaqiyatli!');
       return { success: true, user };
     } catch (err) {
       console.error('Google login error:', err);
-      console.error('Error response:', err.response?.data);
       const errorMsg = err.response?.data?.error || 'Google orqali kirishda xatolik yuz berdi!';
       toast.error(errorMsg);
       return { success: false, error: errorMsg };
@@ -102,16 +132,13 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.updateProfile(data);
       console.log('✅ Profile updated:', response.data);
       
-      // Yangilangan ma'lumotlarni user state ga saqlash
       if (response.data.user) {
         setUser(prev => ({ ...prev, ...response.data.user }));
       } else if (response.data) {
         setUser(prev => ({ ...prev, ...response.data }));
       }
       
-      // Qayta yuklash
       await loadUser();
-      
       toast.success('Profil muvaffaqiyatli yangilandi!');
       return { success: true, user: response.data };
     } catch (err) {
@@ -180,6 +207,12 @@ export const AuthProvider = ({ children }) => {
       user,
       isAuthenticated,
       loading,
+      isLoginOpen,        // Yangi qo'shildi
+      isRegisterOpen,     // Yangi qo'shildi
+      openLogin,          // Yangi qo'shildi
+      openRegister,       // Yangi qo'shildi
+      closeLogin,         // Yangi qo'shildi
+      closeRegister,      // Yangi qo'shildi
       loadUser,
       login,
       register,

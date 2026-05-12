@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom"; // NavLink qo'shildi
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ShoppingCart, User, Heart, Menu, X, Globe, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,7 +7,8 @@ import { useCartStore } from "../../store/useCartStore";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useAuth } from "../../context/AuthContext";
 
-function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
+
+function Navbar({ setIsCartOpen, onLoginClick, onRegisterClick }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { items } = useCartStore();
@@ -32,7 +33,7 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
   };
 
   const currentLang = languages.find(l => l.code === i18n.language);
-  // Mobil menyu ochiqligida skrolni bloklash
+
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.style.overflow = "hidden";
@@ -41,40 +42,23 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
     }
     return () => { document.body.style.overflow = "unset"; };
   }, [isMobileMenuOpen]);
-  // Navbar yashirinishi uchun holatlar
-  const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
 
-  useEffect(() => {
-    const controlNavbar = () => {
-      if (window.scrollY > lastScrollY && window.scrollY > 150) {
-        setIsVisible(false); // Pastga tushganda yashirish
-      } else {
-        setIsVisible(true);  // Tepaga chiqqanda ko'rsatish
-      }
-      setLastScrollY(window.scrollY);
-    };
-    window.addEventListener('scroll', controlNavbar);
-    return () => window.removeEventListener('scroll', controlNavbar);
-  }, [lastScrollY]);
+  // Skrol bo'lganda yashirish mantig'i (isVisible) butunlay olib tashlandi
 
-  // Tarjimalar bilan boyitilgan menyu ro'yxati
- const navLinks = [
-  { path: "/", label: t("Home") },
-  { path: "/products", label: t("Products") },
-  { path: "/wishlist", label: t("Wishlist") },
-  { path: "/cart", label: t("Cart") }, // SHU QATOR BORLIGINI TEKSHIRING!
-  { path: "/contact", label: t("Contact") },
-];
+  const navLinks = [
+    { path: "/", label: t("Home") },
+    { path: "/products", label: t("Products") },
+    { path: "/wishlist", label: t("Wishlist") },
+    { path: "/cart", label: t("Cart") },
+    { path: "/contact", label: t("Contact") },
+  ];
+
   return (
     <>
-    <motion.div
-        initial={{ y: 0 }}
-        animate={{ y: isVisible ? 0 : -160 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed top-0 left-0 right-0 z-50"
-      ></motion.div>
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
+      <nav 
+        // Skrolga qarab yashiriladigan klasslar olib tashlandi, endi u doim ko'rinib turadi
+        className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200"
+      >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6">
           <div className="flex justify-between items-center h-14 sm:h-16 md:h-20">
             {/* Logo */}
@@ -85,7 +69,7 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
               SHOHRUX MARKET
             </Link>
 
-            {/* Desktop Navigation - NavLink bilan yangilandi */}
+            {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-1 xl:gap-3">
               {navLinks.map((link) => (
                 <NavLink
@@ -99,13 +83,11 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
                   {({ isActive }) => (
                     <>
                       {link.label}
-                      {/* Savat yoki Yoqtirilganlar uchun sanagichlar */}
                       {link.path === "/wishlist" && wishlist.length > 0 && (
                         <span className="ml-1 text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full align-top">
                           {wishlist.length}
                         </span>
                       )}
-                      {/* Aktiv chiziq - indicator */}
                       {isActive && (
                         <motion.div
                           layoutId="nav-underline"
@@ -118,9 +100,9 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
               ))}
             </div>
 
-            {/* O'ng tarafdagi tugmalar (Til, Profil, Savat) */}
+            {/* Right Buttons */}
             <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-              {/* Language Dropdown */}
+              {/* Language Dropdown - Tegilmadi */}
               <div className="relative" onMouseEnter={() => setIsLangHover(true)} onMouseLeave={() => setIsLangHover(false)}>
                 <button className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-all text-sm">
                   <span className="text-lg">{currentLang?.flag}</span>
@@ -153,7 +135,7 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
                 </AnimatePresence>
               </div>
 
-              {/* Profile/Auth Section */}
+              {/* Profile Dropdown - Tegilmadi */}
               {isAuthenticated ? (
                 <div className="relative" onMouseEnter={() => setIsUserHover(true)} onMouseLeave={() => setIsUserHover(false)}>
                   <button className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium">
@@ -181,23 +163,19 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setIsLoginOpen(true)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-medium transition">
-                    {t("login")}
-                  </button>
-                  <button onClick={() => setIsRegisterOpen(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition shadow-md">
-                    {t("register")}
-                  </button>
+                  <button onClick={onLoginClick} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-medium transition">{t("login")}</button>
+                  <button onClick={onRegisterClick} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition shadow-md">{t("register")}</button>
                 </div>
               )}
 
-              {/* Cart Toggle Button */}
+              {/* Cart Toggle */}
               <button onClick={() => setIsCartOpen(true)} className="relative flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-xl transition">
                 <ShoppingCart size={16} />
                 <span className="font-bold text-sm">{totalItems}</span>
               </button>
             </div>
 
-            {/* Mobile Menu Trigger */}
+            {/* Mobile Trigger */}
             <div className="flex items-center gap-2 lg:hidden">
               <button onClick={() => setIsCartOpen(true)} className="relative p-1.5">
                 <ShoppingCart size={22} />
@@ -215,7 +193,7 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu - O'zgarishsiz qoldi */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -257,7 +235,6 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
                   </NavLink>
                 ))}
 
-                {/* Mobile Language */}
                 <div className="border-t my-2 pt-4">
                   <p className="text-xs text-slate-400 mb-2">{t("select_language")}</p>
                   <div className="grid grid-cols-3 gap-2">
@@ -276,7 +253,6 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
                   </div>
                 </div>
 
-                {/* Mobile Auth Section */}
                 <div className="border-t mt-auto pt-4 pb-6">
                   {isAuthenticated ? (
                     <div className="space-y-2">
@@ -298,10 +274,10 @@ function Navbar({ setIsCartOpen, setIsLoginOpen, setIsRegisterOpen }) {
                     </div>
                   ) : (
                     <div className="flex gap-2">
-                      <button onClick={() => { setIsLoginOpen(true); setIsMobileMenuOpen(false); }} className="flex-1 py-3 bg-slate-100 rounded-xl font-medium text-sm">
+                      <button onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} className="flex-1 py-3 bg-slate-100 rounded-xl font-medium text-sm">
                         {t("login")}
                       </button>
-                      <button onClick={() => { setIsRegisterOpen(true); setIsMobileMenuOpen(false); }} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium text-sm">
+                      <button onClick={() => { onRegisterClick(); setIsMobileMenuOpen(false); }} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium text-sm">
                         {t("register")}
                       </button>
                     </div>

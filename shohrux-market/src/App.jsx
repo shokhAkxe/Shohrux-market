@@ -1,15 +1,20 @@
 import React, { useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 
-import { AuthProvider } from "./context/AuthContext";
+// Context va Store
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { useCartStore } from "./store/useCartStore";
+
+// Layout komponentlar
 import Navbar from "./components/layout/Navbar";
+import Footer from "./components/layout/Footer";
+
+// Modallar
 import ProductModal from "./components/products/ProductModal";
 import CartSidebar from "./components/cart/CartSidebar";
 import CheckoutModal from "./components/checkout/CheckoutModal";
 import AuthModal from "./components/auth/AuthModal";
-import PrivateRoute from "./components/common/PrivateRoute";
-import Footer from "./components/layout/Footer";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -17,33 +22,50 @@ import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
 import WishlistPage from "./pages/WishlistPage";
-import ProfilePage from "./pages/ProfilePage";  // ✅ IMPORT QILINGAN
+import ProfilePage from "./pages/ProfilePage";
 import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
 
-import { useCartStore } from "./store/useCartStore";
-
+/**
+ * AppContent alohida komponent sifatida: 
+ * Bu yerda useAuth ishlaydi, chunki u AuthProvider ichida o'ralgan (pastga qarang).
+ */
 function AppContent() {
+  // 1. AuthContext dan barcha kerakli holat va funksiyalarni olamiz
+  const { 
+    isAuthenticated, 
+    openLogin, 
+    openRegister, 
+    isLoginOpen, 
+    isRegisterOpen, 
+    closeLogin, 
+    closeRegister 
+  } = useAuth();
+  
+  // 2. Store dan ma'lumotlar
   const { items, clearCart } = useCartStore();
 
+  // 3. Lokal state-lar (Faqat UI modallar uchun)
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const totalPrice = items.reduce((s, i) => s + i.narxi * (i.quantity || 1), 0);
+  // 4. Jami narx hisoblash
+  const totalPrice = items.reduce((s, i) => s + (i.narxi || 0) * (i.quantity || 1), 0);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Toaster position="top-center" />
+      {/* Bildirishnomalar */}
+      <Toaster position="top-center" reverseOrder={false} />
+      
+      {/* Navbar - proplarni to'g'ri nom bilan yuboramiz */}
       <Navbar
         setIsCartOpen={setIsCartOpen}
-        setIsLoginOpen={setIsLoginOpen}
-        setIsRegisterOpen={setIsRegisterOpen}
+        onLoginClick={openLogin}
+        onRegisterClick={openRegister}
       />
 
-      <main className="flex-1">
+      <main className="flex-1 mt-14 sm:mt-16 md:mt-20">
         <Routes>
           <Route path="/" element={<HomePage onProductClick={setSelectedProduct} />} />
           <Route path="/products" element={<ProductsPage onProductClick={setSelectedProduct} />} />
@@ -52,21 +74,25 @@ function AppContent() {
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
-          {/* ✅ PROFIL ROUTE - TUZATILGAN */}
+
+          {/* Profil sahifasi faqat login qilganlar uchun */}
           <Route 
             path="/profile" 
             element={
-              <PrivateRoute>
-                <ProfilePage />
-              </PrivateRoute>
+              isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
             } 
           />
+
+          {/* Noma'lum sahifalar uchun redirect */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
       <Footer />
 
-      {/* Modals */}
+      {/* --- MODAL KOMPONENTLARI --- */}
+      
+      {/* 1. Mahsulot ko'rish modali */}
       {selectedProduct && (
         <ProductModal
           product={selectedProduct}
@@ -75,6 +101,7 @@ function AppContent() {
         />
       )}
 
+      {/* 2. Savatcha (Sidebar) */}
       <CartSidebar
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -84,6 +111,7 @@ function AppContent() {
         }}
       />
 
+      {/* 3. Buyurtma berish modali */}
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
@@ -92,24 +120,23 @@ function AppContent() {
         clearCart={clearCart}
       />
 
+      {/* 4. Login va Register modali (Context dan kelayotgan holat asosida) */}
       <AuthModal
         isLoginOpen={isLoginOpen}
         isRegisterOpen={isRegisterOpen}
-        onCloseLogin={() => setIsLoginOpen(false)}
-        onCloseRegister={() => setIsRegisterOpen(false)}
-        onSwitchToRegister={() => {
-          setIsLoginOpen(false);
-          setIsRegisterOpen(true);
-        }}
-        onSwitchToLogin={() => {
-          setIsRegisterOpen(false);
-          setIsLoginOpen(true);
-        }}
+        onCloseLogin={closeLogin}
+        onCloseRegister={closeRegister}
+        onSwitchToRegister={openRegister}
+        onSwitchToLogin={openLogin}
       />
     </div>
   );
 }
 
+/**
+ * Asosiy App komponenti:
+ * Bu yerda Router va AuthProvider o'ralgan bo'lishi shart!
+ */
 function App() {
   return (
     <BrowserRouter

@@ -163,7 +163,13 @@ Cart: "Savat",
   "news_title": "Yangiliklar",
   "news_desc": "Yangi mahsulotlar va aksiyalardan xabardor bo'ling",
   "subscribe": "Obuna",
-  "all_rights": "Barcha huquqlar himoyalangan."
+  "all_rights": "Barcha huquqlar himoyalangan.",
+  "cart": "Savat",
+  "products_count": "mahsulot",
+  "total": "Jami",
+  "checkout": "Buyurtma berish",
+  "clear_cart": "Savatni tozalash",
+  "sum": "so'm"
     },
   },
   en: {
@@ -329,7 +335,13 @@ Cart: "Cart",
   "news_title": "News",
   "news_desc": "Stay informed about new products and promotions",
   "subscribe": "Subscribe",
-  "all_rights": "All rights reserved."
+  "all_rights": "All rights reserved.",
+  "cart": "Cart",
+  "products_count": "products",
+  "total": "Total",
+  "checkout": "Checkout",
+  "clear_cart": "Clear cart",
+  "sum": "sum"
     },
   },
   ru: {
@@ -493,7 +505,13 @@ Cart: "Корзина",
   "news_title": "Новости",
   "news_desc": "Будьте в курсе новых товаров и акций",
   "subscribe": "Подписаться",
-  "all_rights": "Все права защищены."
+  "all_rights": "Все права защищены.",
+  "cart": "Корзина",
+  "products_count": "товар(ов)",
+  "total": "Итого",
+  "checkout": "Оформить заказ",
+  "clear_cart": "Очистить корзину",
+  "sum": "сум"
     },
   },
 };

@@ -24,9 +24,15 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
       setLoading(true);
       try {
         const result = await googleLogin(tokenResponse.access_token);
-        if (result.success) { onCloseLogin(); onCloseRegister(); }
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+        if (result.success) { 
+          onCloseLogin(); 
+          onCloseRegister(); 
+        }
+      } catch (err) { 
+        console.error(err); 
+      } finally { 
+        setLoading(false); 
+      }
     },
     onError: () => toast.error("Google login failed"),
   });
@@ -37,7 +43,9 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
     setLoading(true);
     const res = await login(email, password);
     setLoading(false);
-    if (res.success) onCloseLogin();
+    if (res.success) {
+      onCloseLogin();
+    }
   };
 
   // 4. REGISTER MANTIQI
@@ -45,12 +53,19 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
     if (!data.name || !data.email || !data.password) return toast.error(t("fill_all_fields"));
     if (data.password !== data.confirm) return toast.error(t("passwords_not_match"));
     setLoading(true);
-    const res = await register({ full_name: data.name, email: data.email, phone: data.phone, password: data.password });
+    const res = await register({ 
+      full_name: data.name, 
+      email: data.email, 
+      phone: data.phone, 
+      password: data.password 
+    });
     setLoading(false);
-    if (res.success) onCloseRegister();
+    if (res.success) {
+      onCloseRegister();
+    }
   };
 
-  // STYLES (O'zgarmagan)
+  // STYLES
   const styles = {
     overlayStyle: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
     modalStyle: { background: "white", width: "100%", maxWidth: "400px", borderRadius: "16px", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" },
@@ -63,8 +78,13 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
 
   return (
     <AnimatePresence>
+      {/* KEY atributi qo'shildi! 
+          Bu modal yopilganda React-ga komponentni butunlay o'chirib yuborishni buyuradi.
+          Qayta ochilganda state toza holatda bo'ladi.
+      */}
       {isLoginOpen && (
         <LoginStep 
+          key="login-modal"
           isOpen={isLoginOpen} 
           onClose={onCloseLogin} 
           onSwitch={onSwitchToRegister} 
@@ -76,6 +96,7 @@ function AuthModal({ isLoginOpen, isRegisterOpen, onCloseLogin, onCloseRegister,
       )}
       {isRegisterOpen && (
         <RegisterStep 
+          key="register-modal"
           isOpen={isRegisterOpen} 
           onClose={onCloseRegister} 
           onSwitch={onSwitchToLogin} 

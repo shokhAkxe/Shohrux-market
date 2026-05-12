@@ -8,12 +8,18 @@ function LoginStep({ isOpen, onClose, onSwitch, handleLogin, googleLoginHandler,
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Brauzerni chalg'itish uchun har gal modal ochilganda o'zgaruvchi key yaratamiz
+  const [formKey, setFormKey] = useState(Date.now());
 
-  // Modal holati o'zgarganda (ochilganda yoki yopilganda) hamma narsani tozalaymiz
+  // Modal holati o'zgarganda (ochilganda) hamma narsani majburiy tozalaymiz
   useEffect(() => {
-    setEmail("");
-    setPassword("");
-    setShowPassword(false);
+    if (isOpen) {
+      setEmail("");
+      setPassword("");
+      setShowPassword(false);
+      setFormKey(Date.now()); // Har gal modal ochilganda yangi ID beradi
+    }
   }, [isOpen]);
 
   const submit = (e) => {
@@ -24,17 +30,19 @@ function LoginStep({ isOpen, onClose, onSwitch, handleLogin, googleLoginHandler,
   if (!isOpen) return null;
 
   return (
-    <div style={styles.overlayStyle}>
+    <div style={styles.overlayStyle} onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 30 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         style={styles.modalStyle}
+        onClick={(e) => e.stopPropagation()} // Modal ichini bossa yopilmasligi uchun
       >
         {/* Sarlavha (Header) */}
         <div style={{ background: "#2563eb", padding: "24px 20px", textAlign: "center", position: "relative" }}>
           <button
+            type="button"
             onClick={onClose}
             style={{ position: "absolute", right: "16px", top: "16px", background: "none", border: "none", color: "white", cursor: "pointer" }}
           >
@@ -45,39 +53,46 @@ function LoginStep({ isOpen, onClose, onSwitch, handleLogin, googleLoginHandler,
         </div>
         
         {/* Forma qismi */}
+        {/* autoComplete="off" va tasodifiy name-lar brauzer to'ldirib yubormasligi uchun */}
         <form onSubmit={submit} style={styles.formStyle} autoComplete="off">
           <input
             type="text"
+            // Har safar o'zgaruvchan name - brauzer buni eslab qolmagan deb o'ylaydi
+            name={`user_email_${formKey}`}
             placeholder={t("email_or_phone")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={styles.inputStyle}
             autoFocus
-            autoComplete="one-time-code" 
+            autoComplete="new-password" // 'off' dan ko'ra ishonchliroq
           />
           
           <div style={styles.passwordWrapperStyle}>
             <input
               type={showPassword ? "text" : "password"}
+              name={`user_pass_${formKey}`}
               placeholder={t("password")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={{ ...styles.inputStyle, marginBottom: 0 }}
               autoComplete="new-password"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={styles.passwordIconStyle}
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
+            
+            {password.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={styles.passwordIconStyle}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            )}
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            style={{ ...styles.buttonStyle, background: "#2563eb" }}
+            style={{ ...styles.buttonStyle, background: "#2563eb", marginTop: "12px" }}
           >
             {loading ? "Kutilmoqda..." : t("login")}
           </button>
