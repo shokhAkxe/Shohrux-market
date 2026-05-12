@@ -31,15 +31,15 @@ function ContactPage() {
 
   const supportChannels = [
     { icon: Headphones, title: t("SupportShortTitle"), desc: t("SupportShortDesc"), color: "bg-purple-500", link: "tel:+998991234567" },
-    { icon: MessageCircle, title: t("TelegramSupport"), desc: "@shohrux_market_support", color: "bg-blue-500", link: "https://t.me/shohrux_market_support" },
+    { icon: MessageCircle, title: t("TelegramSupport"), desc: "@shohrux_market", color: "bg-blue-500", link: "https://t.me/shohrux_98_68" },
     { icon: Globe, title: t("OnlineChat"), desc: t("LiveChatDesc"), color: "bg-green-500", link: "#" },
     { icon: Shield, title: t("QualityAssurance"), desc: t("OriginalProducts"), color: "bg-indigo-500", link: "#" },
   ];
 
   const socials = [
     { icon: Facebook, name: "Facebook", link: "https://facebook.com", color: "text-blue-600" },
-    { icon: Instagram, name: "Instagram", link: "https://instagram.com", color: "text-pink-600" },
-    { icon: Send, name: "Telegram", link: "https://t.me", color: "text-blue-500" },
+    { icon: Instagram, name: "Instagram", link: "https://instagram.com/shohrux_sotimboyev?igsh=MWwwYnh6aXdxaWZINA==", color: "text-pink-600" },
+    { icon: Send, name: "Telegram", link: "https://t.me/shohrux_98_68", color: "text-blue-500" },
     { icon: Youtube, name: "YouTube", link: "https://youtube.com", color: "text-red-600" },
   ];
 

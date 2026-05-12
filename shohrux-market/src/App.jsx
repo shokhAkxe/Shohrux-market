@@ -20,7 +20,6 @@ import AuthModal from "./components/auth/AuthModal";
 import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
-import CartPage from "./pages/CartPage";
 import WishlistPage from "./pages/WishlistPage";
 import ProfilePage from "./pages/ProfilePage";
 import AboutPage from "./pages/AboutPage";
@@ -70,7 +69,6 @@ function AppContent() {
           <Route path="/" element={<HomePage onProductClick={setSelectedProduct} />} />
           <Route path="/products" element={<ProductsPage onProductClick={setSelectedProduct} />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
-          <Route path="/cart" element={<CartPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
