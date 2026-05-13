@@ -177,21 +177,89 @@ function Navbar({ isCartOpen, setIsCartOpen, onLoginClick, onRegisterClick }) {
       </nav>
 
       {/* Mobile Sidebar (O'zgarishsiz) */}
-      <AnimatePresence>
+         <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[100]" onClick={() => setIsMobileMenuOpen(false)} />
-            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed right-0 top-0 w-72 h-full bg-white z-[101] shadow-xl flex flex-col">
+            <div className="fixed inset-0 bg-black/50 z-[100]" onClick={() => setIsMobileMenuOpen(false)} />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              className="fixed right-0 top-0 w-72 h-full bg-white z-[101] shadow-xl"
+            >
               <div className="flex justify-between items-center p-4 border-b">
-                <h2 className="font-bold text-lg">{t("menu")}</h2>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl"><X size={24} /></button>
+                <h2 className="font-bold text-lg">Menu</h2>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl">
+                  <X size={22} />
+                </button>
               </div>
-              <div className="p-4 flex flex-col gap-2">
+              <div className="p-4 flex flex-col gap-2 overflow-y-auto h-[calc(100%-60px)]">
                 {navLinks.map((link) => (
-                  <NavLink key={link.path} to={link.path} onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `flex items-center justify-between p-3 rounded-xl ${isActive ? "bg-blue-50 text-blue-600 font-semibold" : "hover:bg-slate-100"}`}>
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center justify-between p-3 hover:bg-slate-100 rounded-xl transition"
+                  >
                     <span>{link.label}</span>
-                  </NavLink>
+                    {link.path === "/cart" && totalItems > 0 && (
+                      <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">{totalItems}</span>
+                    )}
+                    {link.path === "/wishlist" && wishlist.length > 0 && (
+                      <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">{wishlist.length}</span>
+                    )}
+                  </Link>
                 ))}
+
+                {/* Mobile Language Selection with Flags */}
+                <div className="border-t my-2 pt-4">
+                  <p className="text-xs text-slate-400 mb-2">Til tanlash</p>
+                  <div className="flex gap-2">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => { changeLanguage(lang.code); setIsMobileMenuOpen(false); }}
+                        className={`flex-1 py-2 rounded-xl text-sm flex items-center justify-center gap-2 ${
+                          i18n.language === lang.code ? "bg-blue-600 text-white" : "bg-slate-100"
+                        }`}
+                      >
+                        <span className="text-base">{lang.flag}</span>
+                        <span>{lang.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {isAuthenticated ? (
+                  <>
+                    <div className="border-t pt-4">
+                      <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl mb-2">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
+                          <User size={20} className="text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm truncate">{user?.full_name || user?.email}</p>
+                          <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => { navigate("/profile"); setIsMobileMenuOpen(false); }} className="w-full py-2.5 bg-slate-100 rounded-xl text-sm font-medium">
+                        Profil
+                      </button>
+                    </div>
+                    <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="flex items-center justify-center gap-2 p-3 bg-red-50 text-red-500 rounded-xl mt-2">
+                      <User size={18} /> Chiqish
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex gap-3 pt-4 border-t">
+                    <button onClick={() => { setIsLoginOpen(true); setIsMobileMenuOpen(false); }} className="flex-1 py-2.5 bg-slate-100 rounded-xl font-medium text-sm">
+                      Kirish
+                    </button>
+                    <button onClick={() => { setIsRegisterOpen(true); setIsMobileMenuOpen(false); }} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm">
+                      Ro'yxat
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </>
