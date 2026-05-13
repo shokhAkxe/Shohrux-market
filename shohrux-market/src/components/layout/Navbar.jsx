@@ -20,11 +20,12 @@ function Navbar({ isCartOpen, setIsCartOpen, onLoginClick, onRegisterClick }) {
 
   const totalItems = items.reduce((acc, item) => acc + (item.quantity || 1), 0);
 
-  const languages = [
-    { code: "uz", label: "O'zbekcha", name: "Uzb", flag: "Uz" },
-    { code: "en", label: "English", name: "Eng", flag: "Us" },
-    { code: "ru", label: "Русский", name: "Rus", flag: "Ru" },
-  ];
+ // Navbar funksiyasi ichida, taxminan 19-qatorlarda:
+const languages = [
+  { code: "uz", label: "O'zbekcha", name: "Uzb", flag: "🇺🇿" },
+  { code: "en", label: "English", name: "Eng", flag: "🇺🇸" }, 
+  { code: "ru", label: "Русский", name: "Рус", flag: "🇷🇺" }, 
+];
 
   const changeLanguage = (code) => {
     i18n.changeLanguage(code);
@@ -213,25 +214,28 @@ function Navbar({ isCartOpen, setIsCartOpen, onLoginClick, onRegisterClick }) {
           ))}
 
           {/* Mobile Language Selection */}
-          <div className="border-t my-2 pt-4">
-            {/* Til tanlash so'zi tarjima qilindi */}
-            <p className="text-xs text-slate-400 mb-2">{t("select_language")}</p>
-            <div className="flex gap-2">
-              {languages.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => { changeLanguage(lang.code); setIsMobileMenuOpen(false); }}
-                  className={`flex-1 py-2 rounded-xl text-sm flex items-center justify-center gap-2 ${
-                    i18n.language === lang.code ? "bg-blue-600 text-white" : "bg-slate-100"
-                  }`}
-                >
-                  <span className="text-base">{lang.flag}</span>
-                  <span>{lang.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
+         <div className="border-t my-2 pt-4">
+  {/* Til tanlash so'zi tarjima qilindi */}
+  <p className="text-xs text-slate-400 mb-2">{t("select_language")}</p>
+  <div className="flex gap-2">
+    {languages.map((lang) => (
+      <button
+        key={lang.code}
+        onClick={() => { 
+          changeLanguage(lang.code); 
+          setIsMobileMenuOpen(false); 
+        }}
+        className={`flex-1 py-2 rounded-xl text-sm flex items-center justify-center gap-2 ${
+          i18n.language === lang.code ? "bg-blue-600 text-white" : "bg-slate-100"
+        }`}
+      >
+        {/* Bayroqcha va Til nomi - boshqa hech narsa o'zgarmadi */}
+        <span className="text-base">{lang.flag}</span>
+        <span>{lang.name}</span>
+      </button>
+    ))}
+  </div>
+</div>
           {isAuthenticated ? (
             <>
               <div className="border-t pt-4">
