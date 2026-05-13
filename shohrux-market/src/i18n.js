@@ -193,7 +193,9 @@ About_Us: "Biz haqimizda",
   "brands_count": "50+",
   "brands_label": "Brendlar",
   "quality_percent": "100%",
-  "quality_label": "Sifat kafolati"
+  "quality_label": "Sifat kafolati",
+   Menu:"Menyu",
+   select_language: "Tilni tanlash"
     },
   },
   en: {
@@ -389,7 +391,9 @@ About_Us: "About Us",
   "brands_count": "50+",
   "brands_label": "Brands",
   "quality_percent": "100%",
-  "quality_label": "Quality guarantee"
+  "quality_label": "Quality guarantee",
+   Menu:"Menu",
+   select_language: "Select language"
     },
   },
   ru: {
@@ -583,7 +587,9 @@ About_Us: "О нас",
   "brands_count": "50+",
   "brands_label": "Брендов",
   "quality_percent": "100%",
-  "quality_label": "Гарантия качества"
+  "quality_label": "Гарантия качества",
+  Menu: "Меню",
+  select_language:"Выбор языка"
     },
   },
 };
