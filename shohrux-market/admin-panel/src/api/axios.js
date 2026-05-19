@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+// Bu yerda import.meta.env orqali Vercel-dagi o'zgaruvchini olamiz
+// Agar u topilmasa (lokal ishlatganda), localhost-ni ishlatadi
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api', // Backend URL manzili to'g'ri
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 });
 
 api.interceptors.request.use((config) => {
