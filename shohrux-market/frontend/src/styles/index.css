@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-size: 16px;
+  }
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px;
+    }
+  }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+      sans-serif;
+    background: #f8fafc;
+  }
+
+  /* 🛠 SICHQONCHA BORGANDA CHIZIQNI QORA QILISH GLOBAL MANTIG'I 🛠 */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="search"],
+  textarea,
+  select {
+    /* Standart holatda (sichqoncha yo'qligida) yengil och kulrang chiziq */
+    border: 1px solid #cbd5e1 !important; /* border-slate-300 */
+    background-color: #ffffff !important;
+    color: #1e293b !important; /* Matn rangi to'q slate-800 */
+    opacity: 1 !important;
+    visibility: visible !important;
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-sizing: border-box !important;
+    transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out !important;
+    
+    /* Ichidagi miltillaydigan matn tayoqchasini (cursor) ham to'q qora qilish */
+    caret-color: #1e293b !important;
+  }
+
+  /* SICHQONCHA USTIGA BORGANDA (HOVER) VA ICHIGA BOSILGANDA (FOCUS) */
+  input[type="text"]:hover, input[type="text"]:focus,
+  input[type="email"]:hover, input[type="email"]:focus,
+  input[type="password"]:hover, input[type="password"]:focus,
+  input[type="number"]:hover, input[type="number"]:focus,
+  input[type="tel"]:hover, input[type="tel"]:focus,
+  input[type="search"]:hover, input[type="search"]:focus,
+  textarea:hover, textarea:focus,
+  select:hover, select:focus {
+    /* 1. SICHQONCHA BORGANDA CHIZIQ MAJBURIY TO'Q QORA BO'LADI */
+    border-color: #1e293b !important; /* slate-800 (Aniq qora chiziq) */
+    
+    /* 2. Fon rangi oqib ketmasligi va oq bo'lib yo'qolmasligi uchun uni qulflaymiz */
+    background-color: #ffffff !important; 
+    
+    /* 3. Har qanday lipillash, miltillash yoki yo'qolish effektini taqiqlaymiz */
+    opacity: 1 !important;
+    visibility: visible !important;
+    animation: none !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Brauzer kursor tayog'ini och rangli fon ustida doim to'q qora render qilishi uchun */
+  input:hover, textarea:hover, select:hover {
+    color-scheme: light !important;
+  }
+
+  /* Google Chrome avtomatik to'ldirganda (Autofill) fon sarg'ayib yoki oqib ketishini oldini olish */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus {
+    -webkit-text-fill-color: #1e293b !important;
+    box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6;
+  }
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all shadow-md hover:shadow-lg;
+  }
+  .btn-outline {
+    @apply border border-slate-200 hover:border-blue-300 bg-white text-slate-700 font-medium py-2.5 px-5 rounded-xl transition-all;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.loader {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
