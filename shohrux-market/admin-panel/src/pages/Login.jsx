@@ -21,8 +21,8 @@ const Login = () => {
 
         // ASOSIY: Backend bilan ishlash qismi
         try {
-            // Render backend-ga haqiqiy so'rov yuboramiz
-            const res = await api.post('/auth/login', { username, password });
+            // TUZATILDI: Backend kutayotgan 'emailOrPhone' kalit so'zi bilan username yuboriladi
+            const res = await api.post('/auth/login', { emailOrPhone: username, password });
             
             // Backend-dan kelgan foydalanuvchi va haqiqiy tokenni olamiz
             const { user, token } = res.data;
