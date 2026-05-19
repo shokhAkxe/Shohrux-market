@@ -19,28 +19,25 @@ const Login = () => {
         setError('');
         setLoading(true);
 
-        // VAQTINCHA: Test rejimi (Backend tayyor bo'lmasa kirish uchun)
-        // Agar login "admin" va parol "shox2026" bo'lsa kiradi
-        if (username === 'admin' && password === 'admin123') {
-            setTimeout(() => {
-                login({ full_name: 'Shohrux', role: 'ADMIN' }, 'token-123');
-                navigate('/admin');
-                setLoading(false);
-            }, 1000);
-            return;
-        }
-
         // ASOSIY: Backend bilan ishlash qismi
         try {
+            // Render backend-ga haqiqiy so'rov yuboramiz
             const res = await api.post('/auth/login', { username, password });
-            if (res.data.user.role === 'ADMIN' || res.data.user.role === 'SUPER_ADMIN') {
-                login(res.data.user, res.data.token);
+            
+            // Backend-dan kelgan foydalanuvchi va haqiqiy tokenni olamiz
+            const { user, token } = res.data;
+
+            if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+                // Haqiqiy user va tokenni context-ga (va localStorage-ga) saqlaymiz
+                login(user, token);
                 navigate('/admin');
             } else {
                 setError("Sizda admin huquqlari yo'q!");
             }
         } catch (err) {
-            setError(err.response?.data?.message || "Login yoki parol noto'g'ri!");
+            // Backend-dan kelgan aniq xatolik xabarini ko'rsatamiz
+            const errorMessage = err.response?.data?.error || err.response?.data?.message || "Login yoki parol noto'g'ri!";
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -100,6 +97,7 @@ const Login = () => {
                     </div>
 
                     <button 
+                        type="submit"
                         disabled={loading}
                         className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
                     >
